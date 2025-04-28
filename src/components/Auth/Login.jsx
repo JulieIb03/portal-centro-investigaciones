@@ -1,6 +1,8 @@
 import React, { useState } from "react";
 import "../../styles/Auth.css";
 import logo from "../../assets/LogoUMNG.png";
+import { useAuth } from "./AuthProvider";
+import { Navigate } from "react-router-dom";
 
 const Login = () => {
   const [formData, setFormData] = useState({
@@ -18,6 +20,12 @@ const Login = () => {
     console.log("Datos de login:", formData); // Lógica de autenticación aquí
   };
 
+  const auth = useAuth();
+
+  if (auth.isAuthenticated) {
+    return <Navigate to="/home" />;
+  }
+
   return (
     <div className="auth-container">
       <div className="contenedor">
@@ -27,7 +35,7 @@ const Login = () => {
         </div>
         <div className="form">
           <form onSubmit={handleSubmit}>
-            <h1>INICIO DE SESIÓN</h1>
+            <h1>INICIO DE SESIÓN hola hol ahola</h1>
             <label htmlFor="correo">Correo</label>
             <div className="input-container">
               <box-icon name="envelope" color="#8c8d8e"></box-icon>

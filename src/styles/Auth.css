@@ -11,8 +11,10 @@
 
 /* ========== GLOBAL STYLES ========== */
 body {
+  height: 100vh;
   font-family: "Poppins", sans-serif;
   background-color: #f3f4f7;
+  padding: 30px;
 }
 
 /* ========== CONTENEDORES PRINCIPALES ========== */

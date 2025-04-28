@@ -1,11 +1,17 @@
 import React from "react";
+import Header from "../layout/Header";
 
 const Home = () => {
   return (
-    <div>
-      <h1>Bienvenido al Portal de Investigaciones</h1>
-      <p><a href="/login">Iniciar Sesión</a> | <a href="/registro">Registrarse</a></p>
-    </div>
+    <Header>
+      <div>
+        <h1>Bienvenido al Portal de Investigaciones</h1>
+        <p>
+          <a href="/login">Iniciar Sesión</a> |{" "}
+          <a href="/registro">Registrarse</a>
+        </p>
+      </div>
+    </Header>
   );
 };
 

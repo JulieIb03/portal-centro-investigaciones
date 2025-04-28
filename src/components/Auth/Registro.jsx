@@ -1,8 +1,12 @@
 import React, { useState } from "react";
 import "../../styles/Auth.css";
 import logo from "../../assets/LogoUMNG.png";
+import { useAuth } from "./AuthProvider";
+import { Navigate } from "react-router-dom";
 
 const Registro = () => {
+  const [errorResponse, setErrorResponse] = useState("");
+
   const [formData, setFormData] = useState({
     nombre: "",
     rol: "",
@@ -19,6 +23,12 @@ const Registro = () => {
     e.preventDefault();
     console.log("Datos enviados:", formData); // Aquí iría la lógica de registro
   };
+
+  const auth = useAuth();
+
+  if (auth.isAuthenticated) {
+    return <Navigate to="/home" />;
+  }
 
   return (
     <div className="auth-container">
