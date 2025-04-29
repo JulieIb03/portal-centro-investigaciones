@@ -194,3 +194,13 @@ button:hover {
 .form a:hover {
   text-decoration: underline;
 }
+
+.error-message {
+  background-color: #fbdddd;
+  color: red;
+  margin-top: 10px;
+  font-size: 14px;
+  text-align: center;
+  border-radius: 6px;
+  padding: 12px;
+}

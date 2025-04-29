@@ -2,16 +2,19 @@ import React, { useState } from "react";
 import "../../styles/Auth.css";
 import logo from "../../assets/LogoUMNG.png";
 import { useAuth } from "./AuthProvider";
-import { Navigate } from "react-router-dom";
+import { API_URL } from "./constants";
+import { Navigate, useNavigate } from "react-router-dom";
 
 const Registro = () => {
   const [errorResponse, setErrorResponse] = useState("");
+
+  const navigate = useNavigate();
 
   const [formData, setFormData] = useState({
     nombre: "",
     rol: "",
     correo: "",
-    contraseña: "",
+    contrasena: "",
   });
 
   const handleChange = (e) => {
@@ -19,10 +22,36 @@ const Registro = () => {
     setFormData({ ...formData, [name]: value });
   };
 
-  const handleSubmit = (e) => {
+  async function handleSubmit(e) {
     e.preventDefault();
-    console.log("Datos enviados:", formData); // Aquí iría la lógica de registro
-  };
+    try {
+      const response = await fetch(`${API_URL}/registro`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          nombre: formData.nombre,
+          rol: formData.rol,
+          correo: formData.correo,
+          contrasena: formData.contrasena,
+        }),
+      });
+
+      const data = await response.json();
+
+      if (response.ok) {
+        console.log("Registro exitoso:", data.body.message);
+        navigate("/");
+      } else {
+        console.log("Error en el registro:", data.body.error);
+        setErrorResponse(data.body.error || "Error desconocido");
+      }
+    } catch (error) {
+      console.log(error);
+      setErrorResponse("Error de conexión con el servidor");
+    }
+  }
 
   const auth = useAuth();
 
@@ -76,17 +105,20 @@ const Registro = () => {
                 required
               />
             </div>
-            <label htmlFor="contraseña">Contraseña</label>
+            <label htmlFor="contrasena">Contraseña</label>
             <div className="input-container">
               <box-icon name="key" color="#8c8d8e"></box-icon>
               <input
                 type="password"
-                name="contraseña"
-                value={formData.contraseña}
+                name="contrasena"
+                value={formData.contrasena}
                 onChange={handleChange}
                 required
               />
             </div>
+            {errorResponse && (
+              <div className="error-message">{errorResponse}</div>
+            )}
             <p>
               ¿Ya tienes una cuenta? <a href="/">Inicia Sesión</a>
             </p>
