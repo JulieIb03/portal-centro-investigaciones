@@ -1,1 +1,1 @@
-export const API_URL = "http://localhost:5000/api";
+export const API_URL = "https://sd9gkkc5-5000.use.devtunnels.ms/api";

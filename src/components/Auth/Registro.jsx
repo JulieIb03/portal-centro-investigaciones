@@ -25,7 +25,7 @@ const Registro = () => {
   async function handleSubmit(e) {
     e.preventDefault();
     try {
-      const response = await fetch(`${API_URL}/registro`, {
+      const response = await fetch(`https://sd9gkkc5-5000.use.devtunnels.ms/api/registro`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",

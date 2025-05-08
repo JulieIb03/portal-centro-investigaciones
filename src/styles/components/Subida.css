@@ -1,0 +1,76 @@
+h1,
+h2,
+h3 {
+  color: var(--color-primario);
+}
+
+h3{
+    font-size: 21px;
+}
+
+/* Estilos para el modal */
+.modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: rgba(0, 0, 0, 0.5);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 1000;
+}
+
+.modal-content {
+  border-top: 25px solid var(--color-primario);
+  background: white;
+  padding: 0 20px 20px 20px;
+  border-radius: 8px;
+  width: 450px;
+  max-height: 90vh;
+  overflow-y: auto;
+  position: relative;
+}
+
+.close-button {
+  position: absolute;
+  top: 0px;
+  right: 10px;
+  background: none;
+  border: none;
+  font-size: 30px;
+  cursor: pointer;
+  color: var(--color-primario);
+  width: auto;
+  padding: 0 0.75rem;
+}
+
+.close-button:hover {
+  background-color: white;
+  color: var(--color-primario);
+}
+
+.subidaForm {
+  width: 100%;
+}
+.subidaForm label,
+#documentosLista label {
+  margin: 10px 0;
+}
+.subidaForm input[type="text"],
+.subidaForm input[type="email"],
+.subidaForm input[type="password"] {
+  width: 95%;
+  padding: 10px;
+}
+
+#documentosLista input[type="file"] {
+  background-color: #f3f6fa;
+  border: 1px solid rgba(91, 91, 91, 0.3);
+  width: 95%;
+  margin-top: 5px;
+  padding: 12px 10px;
+  border-radius: 6px;
+  font-family: 'Poppins';
+}
