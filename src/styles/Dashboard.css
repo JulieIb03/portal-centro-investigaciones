@@ -64,86 +64,39 @@ body {
   margin-bottom: 15px;
 }
 
-.table-header button {
-  background-color: #043b5c;
-  color: white;
-  padding: 8px 12px;
-  border: none;
-  border-radius: 6px;
-  cursor: pointer;
-  font-weight: 500;
-  margin: 0;
-  height: 39px;
-  width: auto;
-}
-
-.table-header button:hover {
-  margin: 0;
-  padding: 8px 12px;
-  background-color: white;
-  color: var(--color-primario);
-  border: 2px solid var(--color-primario);
-}
-
-table {
-  width: 100%;
-  border-collapse: collapse;
-  font-size: 0.95rem;
-}
-
-thead {
-  background-color: #e9ecef;
-}
-
-th,
-td {
-  font-size: 16px;
-  text-align: start;
-  padding: 10px;
-  border-top: 1px solid #dee2e6;
-}
-
-th {
-  font-weight: 600;
-}
-
-td {
-  height: auto;
-}
-
-td.estado {
+table .estado {
   padding: 4px 8px;
   border-radius: 6px;
   font-weight: bold;
   display: inline-block;
-  margin-top: 6px;
+  margin: 0px;
 }
 
 .estado.Aprobado {
   background-color: #69c0511a;
-  color: #69c051;
+  color: var(--color-aprobado);
 }
 
 .card.aprobado .card-value {
-  color: #69c051;
+  color: var(--color-aprobado);
 }
 
 .estado.En-corrección {
   background-color: #e7b7171a;
-  color: #e7b717;
+  color: var(--color-correccion);
 }
 
 .card.en-correccion .card-value {
-  color: #e7b717;
+  color: var(--color-correccion);
 }
 
 .estado.En-revisión {
   background-color: #f230301a;
-  color: #f23030;
+  color: var(--color-pendiente);
 }
 
 .card.pendiente .card-value {
-  color: #f23030;
+  color: var(--color-pendiente);
 }
 
 .popup-overlay {

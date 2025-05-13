@@ -66,5 +66,5 @@
 }
 
 .dropdown-item:hover {
-  background-color: #06586f;
+  text-decoration: underline;
 }

@@ -1,13 +1,3 @@
-h1,
-h2,
-h3 {
-  color: var(--color-primario);
-}
-
-h3{
-    font-size: 21px;
-}
-
 /* Estilos para el modal */
 .modal-overlay {
   position: fixed;
@@ -61,6 +51,7 @@ h3{
 .subidaForm input[type="text"],
 .subidaForm input[type="email"],
 .subidaForm input[type="password"] {
+  font-family: 'Poppins';
   width: 95%;
   padding: 10px;
 }

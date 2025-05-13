@@ -1,5 +1,4 @@
 // eslint-disable-next-line
-import "boxicons";
 import "./App.css";
 import React from "react";
 import { BrowserRouter as Router, Routes, Route } from "react-router-dom";
@@ -9,6 +8,7 @@ import Home from "./pages/Home";
 import ProtectedRoute from "./components/Auth/ProtectedRoute";
 import { AuthProvider } from "./components/Auth/AuthProvider"; // asegúrate de ajustar la ruta según tu estructura
 import Dashboard from "./pages/Dashboard";
+import DetallePostulacion from "./pages/DetallePostulacion";
 
 function App() {
   return (
@@ -18,6 +18,7 @@ function App() {
           <Route path="/" element={<Login />} />
           <Route path="/registro" element={<Registro />} />
           <Route path="/dashboard" element={<Dashboard />} />
+          <Route path="/detalle/:codigo" element={<DetallePostulacion />} />
           <Route element={<ProtectedRoute />}>
             <Route path="/home" element={<Home />} />
           </Route>

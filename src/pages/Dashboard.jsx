@@ -1,7 +1,9 @@
 import React, { useState } from "react";
 import Header from "../layout/Header";
+import "../styles/Default.css";
 import "../styles/Dashboard.css";
 import SubidaDocumentos from "../components/Subida";
+import { useNavigate } from "react-router-dom";
 
 const postulaciones = [
   {
@@ -45,6 +47,7 @@ const Modal = ({ children, onClose }) => {
 
 const Dashboard = () => {
   const [open, setOpen] = useState(false);
+  const navigate = useNavigate();
 
   const conteos = {
     Pendiente: 0,
@@ -76,12 +79,14 @@ const Dashboard = () => {
         <section className="table-section">
           <div className="table-header">
             <h2>Todas las postulaciones</h2>
-            <button onClick={() => setOpen(true)}>Nueva postulación</button>
+            <button className="btnAzul" onClick={() => setOpen(true)}>
+              Nueva postulación
+            </button>
           </div>
 
           {open && (
             <Modal onClose={() => setOpen(false)}>
-              <SubidaDocumentos />
+              <SubidaDocumentos onClose={() => setOpen(false)} />
             </Modal>
           )}
 
@@ -98,14 +103,20 @@ const Dashboard = () => {
             </thead>
             <tbody>
               {postulaciones.map((p, i) => (
-                <tr key={i}>
+                <tr
+                  key={i}
+                  onClick={() => navigate(`/detalle/${p.codigo}`)}
+                  className="clickable-row"
+                >
                   <td>{p.codigo}</td>
                   <td>{p.nombre}</td>
                   <td>{p.vinculacion}</td>
                   <td>{p.contrato}</td>
                   <td>{p.revisiones}</td>
-                  <td className={`estado ${p.estado.replace(" ", "-")}`}>
-                    {p.estado}
+                  <td>
+                    <p className={`estado ${p.estado.replace(" ", "-")}`}>
+                      {p.estado}
+                    </p>
                   </td>
                 </tr>
               ))}

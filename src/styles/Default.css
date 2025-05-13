@@ -1,7 +1,116 @@
-h2 {
+:root {
+  --color-primario: #0b3c4d;
+  --color-secundario: #f5af00;
+  --color-fondo: #f3f4f7;
+  --color-input-bg: #f3f6fa;
+  --color-texto-principal: #5b5b5b;
+  --color-borde-input: rgba(91, 91, 91, 0.3);
+  --color-focus: #ffb703;
+  --color-blanco: #ffffff;
+  --color-pendiente: #f23030;
+  --color-correccion: #f9b233;
+  --color-aprobado: #4caf50;
+}
+body {
+  height: 100vh;
+  font-family: "Poppins", sans-serif;
+  background-color: #f3f4f7;
+  padding: 30px;
+  color: var(--color-texto-principal);
+}
+
+#root{
+  height: 100%;
+  font-family: "Poppins", sans-serif;
+}
+
+/* ========== TITULOS ========== */
+
+h1,
+h2,
+h3 {
   color: var(--color-primario);
+  font-family: 'Poppins';
+}
+h2 {
   font-weight: 600;
 }
-h3{
-    color: var(--color-primario);
+
+/* ========== TABLAS ========= */
+
+table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+thead {
+  background-color: #e9ecef;
+}
+
+table th,
+table td {
+  padding: 0.75rem;
+  border: 1px solid #ccc;
+  text-align: left;
+}
+
+th {
+  font-weight: 600;
+}
+
+td {
+  height: auto;
+}
+
+/* ========== BOTONES ========== */
+button {
+  width: 50%;
+  margin: 0 auto;
+  padding: 0.75rem;
+  font-size: 16px;
+  font-weight: 600;
+  font-family: "Poppins";
+  color: #0b3c4d;
+  background-color: #f5af00;
+  border: none;
+  border-radius: 0.375rem;
+  cursor: pointer;
+  transition: background-color 0.2s;
+}
+
+button:hover {
+  background-color: #0b3c4d;
+  color: white;
+}
+
+.btnAzul {
+  background-color: var(--color-primario);
+  color: white;
+  padding: 8px 12px;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+  font-weight: 500;
+  margin: 0;
+  width: auto;
+}
+
+.btnAzul:hover {
+  background-color: white;
+  color: var(--color-primario);
+  border: 2px solid var(--color-primario);
+}
+
+/* ========== ESTADOS ========== */
+
+.Pendiente {
+  color: var(--color-pendiente);
+}
+
+.En-corrección {
+  color: var(--color-correccion);
+}
+
+.Aprobado {
+  color: var(--color-aprobado);
 }
