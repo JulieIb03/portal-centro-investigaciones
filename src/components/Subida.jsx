@@ -2,7 +2,7 @@ import React, { useEffect, useState } from "react";
 import "../styles/Default.css";
 import "../styles/components/Subida.css";
 
-// Estas constantes están fuera del componente para evitar ciclos infinitos
+// Constantes fuera del componente para evitar ciclos infinitos
 const opcionesSubvinculacion = {
   contrato_ops: ["Asistente de Investigación", "Joven Investigador"],
   asistente_graduado: ["Proceso Nuevo", "Proceso de Renovación"],

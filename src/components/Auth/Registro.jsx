@@ -1,16 +1,15 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import "../../styles/Default.css";
 import "../../styles/Auth.css";
 import logo from "../../assets/LogoUMNG.png";
-import { useAuth } from "./AuthProvider";
-import { API_URL } from "./constants";
-import { Navigate, useNavigate } from "react-router-dom";
+import { Navigate, Link } from "react-router-dom";
 
-const Registro = () => {
-  const [errorResponse, setErrorResponse] = useState("");
+import appFirebase from "../../Credenciales";
+import { getAuth, onAuthStateChanged, createUserWithEmailAndPassword } from "firebase/auth";
 
-  const navigate = useNavigate();
+const auth = getAuth(appFirebase);
 
+export default function Registro() {
   const [formData, setFormData] = useState({
     nombre: "",
     rol: "",
@@ -23,44 +22,37 @@ const Registro = () => {
     setFormData({ ...formData, [name]: value });
   };
 
-  async function handleSubmit(e) {
+  const [mensaje, setMensaje] = useState("");
+  const [errorResponse, setErrorResponse] = useState("");
+
+  const handleRegistro = async (e) => {
     e.preventDefault();
     try {
-      const response = await fetch(
-        `https://sd9gkkc5-5000.use.devtunnels.ms/api/registro`,
-        {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({
-            nombre: formData.nombre,
-            rol: formData.rol,
-            correo: formData.correo,
-            contrasena: formData.contrasena,
-          }),
-        }
+      await createUserWithEmailAndPassword(
+        auth,
+        formData.correo,
+        formData.contrasena
       );
-
-      const data = await response.json();
-
-      if (response.ok) {
-        console.log("Registro exitoso:", data.body.message);
-        navigate("/");
-      } else {
-        console.log("Error en el registro:", data.body.error);
-        setErrorResponse(data.body.error || "Error desconocido");
-      }
+      setMensaje("Usuario registrado exitosamente.");
+      setErrorResponse("");
     } catch (error) {
-      console.log(error);
-      setErrorResponse("Error de conexión con el servidor");
+      console.error(error);
+      setErrorResponse("Error al registrar usuario: " + error.message);
+      setMensaje("");
     }
-  }
+  };
 
-  const auth = useAuth();
+  const [usuarioAutenticado, setUsuarioAutenticado] = useState(false);
 
-  if (auth.isAuthenticated) {
-    return <Navigate to="/home" />;
+  useEffect(() => {
+    const unsubscribe = onAuthStateChanged(auth, (user) => {
+      setUsuarioAutenticado(!!user);
+    });
+    return () => unsubscribe();
+  }, []);
+
+  if (usuarioAutenticado) {
+    return <Navigate to="/dashboard" />;
   }
 
   return (
@@ -71,7 +63,7 @@ const Registro = () => {
           <h2>Portal Centro de Investigaciones</h2>
         </div>
         <div className="form">
-          <form onSubmit={handleSubmit}>
+          <form onSubmit={handleRegistro}>
             <h1>REGISTRO</h1>
             <label htmlFor="nombre">Nombre</label>
             <div className="input-container">
@@ -98,6 +90,7 @@ const Registro = () => {
                 />
               </svg>
               <input
+                id="nombre"
                 type="text"
                 name="nombre"
                 value={formData.nombre}
@@ -136,6 +129,7 @@ const Registro = () => {
                 />
               </svg>
               <input
+                id="correo"
                 type="email"
                 name="correo"
                 value={formData.correo}
@@ -164,6 +158,7 @@ const Registro = () => {
                 </g>
               </svg>
               <input
+                id="contrasena"
                 type="password"
                 name="contrasena"
                 value={formData.contrasena}
@@ -175,7 +170,7 @@ const Registro = () => {
               <div className="error-message">{errorResponse}</div>
             )}
             <p>
-              ¿Ya tienes una cuenta? <a href="/">Inicia Sesión</a>
+              ¿Ya tienes una cuenta? <Link to="/">Inicia Sesión</Link>
             </p>
             <button type="submit">Registrarme</button>
           </form>
@@ -183,6 +178,4 @@ const Registro = () => {
       </div>
     </div>
   );
-};
-
-export default Registro;
+}

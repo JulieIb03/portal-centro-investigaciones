@@ -1,16 +1,15 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import "../../styles/Default.css";
 import "../../styles/Auth.css";
 import logo from "../../assets/LogoUMNG.png";
-import { useAuth } from "./AuthProvider";
-import { API_URL } from "./constants";
 import { Navigate, useNavigate } from "react-router-dom";
 
-const Login = () => {
-  const [errorResponse, setErrorResponse] = useState("");
+import appFirebase from "../../Credenciales";
+import { getAuth, onAuthStateChanged, signInWithEmailAndPassword } from "firebase/auth";
 
-  const navigate = useNavigate();
+const auth = getAuth(appFirebase);
 
+export default function Login() {
   const [formData, setFormData] = useState({
     correo: "",
     contrasena: "",
@@ -21,39 +20,39 @@ const Login = () => {
     setFormData({ ...formData, [name]: value });
   };
 
-  async function handleSubmit(e) {
+  const [mensaje, setMensaje] = useState("");
+  const [errorResponse, setErrorResponse] = useState("");
+
+  const handleLogin = async (e) => {
     e.preventDefault();
     try {
-      const response = await fetch(`${API_URL}/login`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          correo: formData.correo,
-          contrasena: formData.contrasena,
-        }),
-      });
+      await signInWithEmailAndPassword(
+        auth,
+        formData.correo,
+        formData.contrasena
+      );
+      setErrorResponse(""); // Limpiar errores
 
-      const data = await response.json();
-
-      if (response.ok) {
-        console.log("Login exitoso");
-        navigate("/home");
-      } else {
-        console.log("Error en el login:", data.body.error);
-        setErrorResponse(data.body.error || "Error desconocido");
-      }
-    } catch (error) {
-      console.log(error);
-      setErrorResponse("Error de conexión con el servidor");
+      setMensaje("Inicio de sesión exitoso.");
+      setErrorResponse("");
+    } catch (err) {
+      console.error(err);
+      setErrorResponse("Credenciales incorrectas o error en el servidor.");
+      setMensaje("");
     }
-  }
+  };
 
-  const auth = useAuth();
+  const [usuarioAutenticado, setUsuarioAutenticado] = useState(false);
 
-  if (auth.isAuthenticated) {
-    return <Navigate to="/home" />;
+  useEffect(() => {
+    const unsubscribe = onAuthStateChanged(auth, (user) => {
+      setUsuarioAutenticado(!!user);
+    });
+    return () => unsubscribe();
+  }, []);
+
+  if (usuarioAutenticado) {
+    return <Navigate to="/dashboard" />;
   }
 
   return (
@@ -64,7 +63,7 @@ const Login = () => {
           <h2>Portal Centro de Investigaciones</h2>
         </div>
         <div className="form">
-          <form onSubmit={handleSubmit}>
+          <form onSubmit={handleLogin}>
             <h1>INICIO DE SESIÓN</h1>
             <label htmlFor="correo">Correo</label>
             <div className="input-container">
@@ -113,7 +112,7 @@ const Login = () => {
                 </g>
               </svg>
               <input
-                id="contraseñna"
+                id="contrasena"
                 type="password"
                 name="contrasena"
                 value={formData.contrasena}
@@ -130,6 +129,4 @@ const Login = () => {
       </div>
     </div>
   );
-};
-
-export default Login;
+}
