@@ -1,13 +1,12 @@
-import React, { useState, useEffect } from "react";
+import React, { useState } from "react";
 import "../../styles/Default.css";
 import "../../styles/Auth.css";
 import logo from "../../assets/LogoUMNG.png";
-import { Navigate, useNavigate } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom"; // Cambia useNavigate por Navigate
+import { useAuth } from "./AuthProvider"; // Usa el hook unificado
 
-import appFirebase from "../../Credenciales";
-import { getAuth, onAuthStateChanged, signInWithEmailAndPassword } from "firebase/auth";
-
-const auth = getAuth(appFirebase);
+import { auth } from "../../Credenciales";
+import { signInWithEmailAndPassword } from "firebase/auth";
 
 export default function Login() {
   const [formData, setFormData] = useState({
@@ -15,13 +14,14 @@ export default function Login() {
     contrasena: "",
   });
 
+  const { user } = useAuth(); // Obtén el usuario del AuthProvider
+  const navigate = useNavigate();
+  const [errorResponse, setErrorResponse] = useState("");
+
   const handleChange = (e) => {
     const { name, value } = e.target;
     setFormData({ ...formData, [name]: value });
   };
-
-  const [mensaje, setMensaje] = useState("");
-  const [errorResponse, setErrorResponse] = useState("");
 
   const handleLogin = async (e) => {
     e.preventDefault();
@@ -31,28 +31,18 @@ export default function Login() {
         formData.correo,
         formData.contrasena
       );
-      setErrorResponse(""); // Limpiar errores
-
-      setMensaje("Inicio de sesión exitoso.");
-      setErrorResponse("");
+      // Redirige después de login exitoso
+      navigate("/dashboard");
     } catch (err) {
       console.error(err);
       setErrorResponse("Credenciales incorrectas o error en el servidor.");
-      setMensaje("");
     }
   };
 
-  const [usuarioAutenticado, setUsuarioAutenticado] = useState(false);
-
-  useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, (user) => {
-      setUsuarioAutenticado(!!user);
-    });
-    return () => unsubscribe();
-  }, []);
-
-  if (usuarioAutenticado) {
-    return <Navigate to="/dashboard" />;
+  // Si ya está autenticado, redirige al dashboard
+  if (user) {
+    navigate("/dashboard");
+    return null;
   }
 
   return (
@@ -75,8 +65,8 @@ export default function Login() {
                 fill="none"
               >
                 <path
-                  fill-rule="evenodd"
-                  clip-rule="evenodd"
+                  fillRule="evenodd"
+                  clipRule="evenodd"
                   d="M1.125 0.875L0 2V20L1.125 21.125H25.875L27 20V2L25.875 0.875H1.125ZM2.25 4.54325V18.875H24.75V4.54288L13.4998 14.7704L2.25 4.54325ZM22.9649 3.125H4.03479L13.4998 11.7296L22.9649 3.125Z"
                   fill="#8C8D8E"
                 />

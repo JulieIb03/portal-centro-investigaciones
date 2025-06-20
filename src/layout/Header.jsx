@@ -2,9 +2,11 @@ import { Link } from "react-router-dom";
 import React, { useState } from "react";
 import "../styles/Header.css";
 import logo from "../assets/LogoUMNG.png";
+import { useAuth } from "../components/Auth/AuthProvider";
 
 export default function Header({ children }) {
   const [showDropdown, setShowDropdown] = useState(false);
+  const { user } = useAuth();
 
   const toggleDropdown = () => setShowDropdown(!showDropdown);
 
@@ -41,19 +43,19 @@ export default function Header({ children }) {
                 <path
                   d="M18 20V18C18 16.9391 17.5786 15.9217 16.8284 15.1716C16.0783 14.4214 15.0609 14 14 14H6C4.93913 14 3.92172 14.4214 3.17157 15.1716C2.42143 15.9217 2 16.9391 2 18V20"
                   stroke="white"
-                  stroke-width="2.5"
-                  stroke-linecap="round"
-                  stroke-linejoin="round"
+                  strokeWidth="2.5"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
                 />
                 <path
                   d="M10 10C12.2091 10 14 8.20914 14 6C14 3.79086 12.2091 2 10 2C7.79086 2 6 3.79086 6 6C6 8.20914 7.79086 10 10 10Z"
                   stroke="white"
-                  stroke-width="2.5"
-                  stroke-linecap="round"
-                  stroke-linejoin="round"
+                  strokeWidth="2.5"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
                 />
               </svg>
-              <span className="username">Usuario</span>
+              <span className="username">{user?.nombre || "Usuario"}</span>
               <svg
                 width="17"
                 height="12"
@@ -61,7 +63,7 @@ export default function Header({ children }) {
                 fill="none"
                 xmlns="http://www.w3.org/2000/svg"
               >
-                <path d="M2 2L9 9L15.5 2" stroke="white" stroke-width="3" />
+                <path d="M2 2L9 9L15.5 2" stroke="white" strokeWidth="3" />
               </svg>
             </div>
 

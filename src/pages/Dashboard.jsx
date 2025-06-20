@@ -1,36 +1,12 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import Header from "../layout/Header";
 import "../styles/Default.css";
 import "../styles/Dashboard.css";
 import SubidaDocumentos from "../components/Subida";
 import { useNavigate } from "react-router-dom";
-
-const postulaciones = [
-  {
-    codigo: "IMP-ING 4083",
-    nombre: "Maria Carranza",
-    vinculacion: "Estudiante",
-    contrato: "Auxiliar de Pregrado",
-    revisiones: 2,
-    estado: "Aprobado",
-  },
-  {
-    codigo: "INV-ING-4181",
-    nombre: "Tatiana Lopez",
-    vinculacion: "Asistente",
-    contrato: "Nuevo",
-    revisiones: 1,
-    estado: "Aprobado",
-  },
-  {
-    codigo: "INV-ING-4181",
-    nombre: "Julie Alejandra Ibarra",
-    vinculacion: "Asistente Graduado",
-    contrato: "Renovación",
-    revisiones: 2,
-    estado: "En corrección",
-  },
-];
+import { useAuth } from "../components/Auth/AuthProvider";
+import { collection, query, where, onSnapshot } from "firebase/firestore";
+import { db } from "../Credenciales";
 
 const Modal = ({ children, onClose }) => {
   return (
@@ -49,10 +25,54 @@ const Dashboard = () => {
   const [open, setOpen] = useState(false);
   const navigate = useNavigate();
 
-  const conteos = {
+  const { user } = useAuth();
+  const [postulaciones, setPostulaciones] = useState([]);
+  const [conteos, setConteos] = useState({
     Pendiente: 0,
-    "En corrección": 1,
-    Aprobado: 2,
+    "En corrección": 0,
+    Aprobado: 0,
+  });
+
+  useEffect(() => {
+    if (!user) return;
+
+    // Consulta para las postulaciones del usuario (docente) o todas (revisor)
+    const q =
+      user.rol === "docente"
+        ? query(
+            collection(db, "postulaciones"),
+            where("usuarioId", "==", user.uid)
+          )
+        : query(collection(db, "postulaciones"));
+
+    const unsubscribe = onSnapshot(q, (querySnapshot) => {
+      const posts = [];
+      const nuevosConteos = {
+        Pendiente: 0,
+        "En corrección": 0,
+        Aprobado: 0,
+      };
+
+      querySnapshot.forEach((doc) => {
+        const data = doc.data();
+        posts.push({ id: doc.id, ...data });
+
+        if (data.estado in nuevosConteos) {
+          nuevosConteos[data.estado]++;
+        }
+      });
+
+      setPostulaciones(posts);
+      setConteos(nuevosConteos);
+    });
+
+    return () => unsubscribe();
+  }, [user]);
+
+  const tiposVinculacion = {
+    contrato_ops: "Contrato OPS",
+    asistente_graduado: "Asistente Graduado",
+    estudiantes: "Estudiantes",
   };
 
   return (
@@ -79,12 +99,16 @@ const Dashboard = () => {
         <section className="table-section">
           <div className="table-header">
             <h2>Todas las postulaciones</h2>
-            <button className="btnAzul" onClick={() => setOpen(true)}>
-              Nueva postulación
-            </button>
+            {/* Muestra el botón solo si el rol es docente */}
+            {user?.rol === "docente" && (
+              <button className="btnAzul" onClick={() => setOpen(true)}>
+                Nueva postulación
+              </button>
+            )}
           </div>
 
-          {open && (
+          {/* Muestra el modal solo si el rol es docente */}
+          {user?.rol === "docente" && open && (
             <Modal onClose={() => setOpen(false)}>
               <SubidaDocumentos onClose={() => setOpen(false)} />
             </Modal>
@@ -105,13 +129,15 @@ const Dashboard = () => {
               {postulaciones.map((p, i) => (
                 <tr
                   key={i}
-                  onClick={() => navigate(`/detalle/${p.codigo}`)}
+                  onClick={() => navigate(`/detalle/${p.id}`)} // Usa p.id en lugar de p.codigo
                   className="clickable-row"
                 >
-                  <td>{p.codigo}</td>
-                  <td>{p.nombre}</td>
-                  <td>{p.vinculacion}</td>
-                  <td>{p.contrato}</td>
+                  <td>{p.codigoProyecto}</td>
+                  <td>{p.nombrePostulante}</td>
+                  <td>
+                    {tiposVinculacion[p.tipoVinculacion] || p.tipoVinculacion}
+                  </td>
+                  <td>{p.subvinculacion}</td>
                   <td>{p.revisiones}</td>
                   <td>
                     <p className={`estado ${p.estado.replace(" ", "-")}`}>

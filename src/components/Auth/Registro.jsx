@@ -4,10 +4,16 @@ import "../../styles/Auth.css";
 import logo from "../../assets/LogoUMNG.png";
 import { Navigate, Link } from "react-router-dom";
 
-import appFirebase from "../../Credenciales";
-import { getAuth, onAuthStateChanged, createUserWithEmailAndPassword } from "firebase/auth";
+import { doc, setDoc } from "firebase/firestore"; // Añade esta importación
+import { auth, db } from "../../Credenciales";
+// import appFirebase from "../../Credenciales";
+import {
+  getAuth,
+  onAuthStateChanged,
+  createUserWithEmailAndPassword,
+} from "firebase/auth";
 
-const auth = getAuth(appFirebase);
+// const auth = getAuth(appFirebase);
 
 export default function Registro() {
   const [formData, setFormData] = useState({
@@ -28,11 +34,19 @@ export default function Registro() {
   const handleRegistro = async (e) => {
     e.preventDefault();
     try {
-      await createUserWithEmailAndPassword(
+      const userCredential = await createUserWithEmailAndPassword(
         auth,
         formData.correo,
         formData.contrasena
       );
+
+      // Guardar datos adicionales en Firestore
+      await setDoc(doc(db, "usuarios", userCredential.user.uid), {
+        nombre: formData.nombre,
+        rol: formData.rol,
+        correo: formData.correo,
+        fechaRegistro: new Date(),
+      });
       setMensaje("Usuario registrado exitosamente.");
       setErrorResponse("");
     } catch (error) {
@@ -77,16 +91,16 @@ export default function Registro() {
                 <path
                   d="M18 20V18C18 16.9391 17.5786 15.9217 16.8284 15.1716C16.0783 14.4214 15.0609 14 14 14H6C4.93913 14 3.92172 14.4214 3.17157 15.1716C2.42143 15.9217 2 16.9391 2 18V20"
                   stroke="#8c8d8e"
-                  stroke-width="2.5"
-                  stroke-linecap="round"
-                  stroke-linejoin="round"
+                  strokeWidth="2.5"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
                 />
                 <path
                   d="M10 10C12.2091 10 14 8.20914 14 6C14 3.79086 12.2091 2 10 2C7.79086 2 6 3.79086 6 6C6 8.20914 7.79086 10 10 10Z"
                   stroke="#8c8d8e"
-                  stroke-width="2.5"
-                  stroke-linecap="round"
-                  stroke-linejoin="round"
+                  strokeWidth="2.5"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
                 />
               </svg>
               <input
@@ -122,8 +136,8 @@ export default function Registro() {
                 fill="none"
               >
                 <path
-                  fill-rule="evenodd"
-                  clip-rule="evenodd"
+                  fillRule="evenodd"
+                  clipRule="evenodd"
                   d="M1.125 0.875L0 2V20L1.125 21.125H25.875L27 20V2L25.875 0.875H1.125ZM2.25 4.54325V18.875H24.75V4.54288L13.4998 14.7704L2.25 4.54325ZM22.9649 3.125H4.03479L13.4998 11.7296L22.9649 3.125Z"
                   fill="#8C8D8E"
                 />

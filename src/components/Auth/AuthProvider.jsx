@@ -1,25 +1,45 @@
-import { createContext, useContext, useState, useEffect } from "react";
-import { getAuth, onAuthStateChanged } from "firebase/auth";
-import appFirebase from "../../Credenciales";
+import React, { createContext, useContext, useState, useEffect } from "react";
+import { auth } from "../../Credenciales";
+import { onAuthStateChanged } from "firebase/auth";
+import { doc, getDoc } from "firebase/firestore";
+import { db } from "../../Credenciales";
 
 const AuthContext = createContext();
-const auth = getAuth(appFirebase);
 
 export function AuthProvider({ children }) {
-  const [usuario, setUsuario] = useState(null);
+  const [user, setUser] = useState(null);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, setUsuario);
-    return () => unsubscribe();
+    const unsubscribe = onAuthStateChanged(auth, async (userAuth) => {
+      if (userAuth) {
+        const userDoc = await getDoc(doc(db, "usuarios", userAuth.uid));
+        setUser({
+          uid: userAuth.uid,
+          email: userAuth.email,
+          ...(userDoc.exists() ? userDoc.data() : {})
+        });
+      } else {
+        setUser(null);
+      }
+      setLoading(false);
+    });
+
+    return unsubscribe;
   }, []);
 
   return (
-    <AuthContext.Provider value={{ usuario }}>
-      {children}
+    <AuthContext.Provider value={{ user, loading }}>
+      {!loading && children}
     </AuthContext.Provider>
   );
 }
 
+// Exporta el hook useAuth desde aquí mismo
 export function useAuth() {
-  return useContext(AuthContext);
+  const context = useContext(AuthContext);
+  if (!context) {
+    throw new Error("useAuth debe usarse dentro de un AuthProvider");
+  }
+  return context;
 }

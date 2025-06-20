@@ -1,9 +1,8 @@
-// Importa las funciones necesarias desde Firebase SDK
 import { initializeApp } from "firebase/app";
 import { getAnalytics } from "firebase/analytics";
-import { getAuth } from "firebase/auth"; 
+import { getAuth } from "firebase/auth";
+import { getFirestore } from "firebase/firestore"; 
 
-// Configuración de Firebase
 const firebaseConfig = {
   apiKey: process.env.REACT_APP_FIREBASE_API_KEY,
   authDomain: process.env.REACT_APP_FIREBASE_AUTH_DOMAIN,
@@ -14,11 +13,10 @@ const firebaseConfig = {
   measurementId: process.env.REACT_APP_FIREBASE_MEASUREMENT_ID,
 };
 
-// Inicializar Firebase
 const appFirebase = initializeApp(firebaseConfig);
 const analytics = getAnalytics(appFirebase);
-const auth = getAuth(appFirebase); 
+const auth = getAuth(appFirebase);
+const db = getFirestore(appFirebase); 
 
-// Exporta
-export { auth }; 
+export { auth, db}; 
 export default appFirebase;

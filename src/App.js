@@ -7,8 +7,8 @@ import Login from "./components/Auth/Login";
 import Logout from "./components/Auth/Logout";
 import Dashboard from "./pages/Dashboard";
 import DetallePostulacion from "./pages/DetallePostulacion";
-import ProtectedRoute from "./components/Auth/ProtectedRoute";
 import { AuthProvider } from "./components/Auth/AuthProvider";
+import ProtectedRoute from "./components/Auth/ProtectedRoute";
 
 function App() {
   return (

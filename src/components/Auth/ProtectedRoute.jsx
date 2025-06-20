@@ -2,7 +2,11 @@ import { Navigate, Outlet } from "react-router-dom";
 import { useAuth } from "./AuthProvider";
 
 export default function ProtectedRoute() {
-  const { usuario } = useAuth();
+  const { user, loading } = useAuth();
 
-  return usuario ? <Outlet /> : <Navigate to="/" />;
+  if (loading) {
+    return <div>Cargando...</div>;
+  }
+
+  return user ? <Outlet /> : <Navigate to="/" />;
 }

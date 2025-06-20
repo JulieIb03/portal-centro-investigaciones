@@ -1,6 +1,9 @@
-import React, { useEffect, useState } from "react";
+import React, { useState, useEffect } from "react";
 import "../styles/Default.css";
 import "../styles/components/Subida.css";
+import { db } from "../Credenciales";
+import { doc, setDoc, collection, serverTimestamp } from "firebase/firestore";
+import { useAuth } from "./Auth/AuthProvider";
 
 // Constantes fuera del componente para evitar ciclos infinitos
 const opcionesSubvinculacion = {
@@ -62,16 +65,9 @@ const SubidaDocumentos = ({
   subvinculacion: subvinculacionInicial = "",
   onClose,
 }) => {
-  const [codigoProyecto, setCodigoProyecto] = useState(codigoInicial);
-  const [nombrePostulante, setNombrePostulante] = useState(nombreInicial);
-  const [tipoVinculacion, setTipoVinculacion] = useState(
-    tipoVinculacionInicial
-  );
-  const [subvinculacion, setSubvinculacion] = useState(subvinculacionInicial);
-  const [subvinculaciones, setSubvinculaciones] = useState([]);
-  const [documentos, setDocumentos] = useState([]);
-  const [formDisabled] = useState(false);
-  const [archivos, setArchivos] = useState({});
+  const { user } = useAuth();
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState(null);
 
   const esReenvio = !!(
     codigoInicial ||
@@ -80,51 +76,161 @@ const SubidaDocumentos = ({
     subvinculacionInicial
   );
 
-  // eslint-disable-next-line react-hooks/exhaustive-deps
+  const [formData, setFormData] = useState({
+    codigoProyecto: codigoInicial,
+    nombrePostulante: nombreInicial,
+    tipoVinculacion: tipoVinculacionInicial,
+    subvinculacion: subvinculacionInicial,
+    estado: esReenvio ? "En corrección" : "Pendiente",
+    revisiones: esReenvio ? 1 : 0,
+    fechaCreacion: serverTimestamp(),
+    fechaActualizacion: serverTimestamp(),
+    usuarioId: user?.uid,
+    documentos: {},
+  });
+
+  const [subvinculaciones, setSubvinculaciones] = useState([]);
+  const [documentos, setDocumentos] = useState([]);
+
   useEffect(() => {
-    if (tipoVinculacion) {
-      setSubvinculaciones(opcionesSubvinculacion[tipoVinculacion] || []);
+    if (formData.tipoVinculacion) {
+      setSubvinculaciones(
+        opcionesSubvinculacion[formData.tipoVinculacion] || []
+      );
     } else {
       setSubvinculaciones([]);
     }
-
-    // Solo reinicia subvinculacion si NO viene por props
-    if (!subvinculacionInicial) setSubvinculacion("");
-  }, [tipoVinculacion, subvinculacionInicial]);
+  }, [formData.tipoVinculacion]);
 
   useEffect(() => {
-    if (subvinculacion) {
-      setDocumentos(documentosRequeridos[subvinculacion] || []);
+    if (formData.subvinculacion) {
+      setDocumentos(documentosRequeridos[formData.subvinculacion] || []);
     } else {
       setDocumentos([]);
     }
-  }, [subvinculacion]);
+  }, [formData.subvinculacion]);
 
-  const handleArchivo = (e, nombreDocumento) => {
-    const nuevoArchivo = e.target.files[0];
-    setArchivos((prev) => ({
+  const MAX_FILE_SIZE = 5 * 1024 * 1024; // 5MB
+  const ALLOWED_TYPES = ["application/pdf"];
+
+  const handleArchivo = async (e, nombreDocumento) => {
+    const file = e.target.files[0];
+
+    if (!file) return;
+
+    if (file.size > MAX_FILE_SIZE) {
+      setError("El archivo no debe exceder los 5MB");
+      return;
+    }
+
+    if (!ALLOWED_TYPES.includes(file.type)) {
+      setError("Solo se permiten archivos PDF");
+      return;
+    }
+
+    setLoading(true);
+    setError(null);
+
+    const formDataCloud = new FormData();
+    formDataCloud.append("file", file);
+    formDataCloud.append("upload_preset", "portal_umng_uploads"); // 👈 era `formData` mal escrito ahí
+    formDataCloud.append("folder", "portal_umng/postulaciones");
+
+    try {
+      const response = await fetch(
+        `https://api.cloudinary.com/v1_1/dchkzapvx/upload`, // 👈 pon directamente tu cloud name
+        {
+          method: "POST",
+          body: formDataCloud,
+        }
+      );
+      const data = await response.json();
+
+      setFormData((prev) => ({
+        ...prev,
+        documentos: {
+          ...prev.documentos,
+          [nombreDocumento]: {
+            url: data.secure_url,
+            public_id: data.public_id,
+            fechaSubida: serverTimestamp(),
+          },
+        },
+      }));
+    } catch (error) {
+      console.error("Error al subir archivo:", error);
+      setError("Error al subir el archivo. Intente nuevamente.");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleChange = (e) => {
+    const { name, value } = e.target;
+    setFormData((prev) => ({
       ...prev,
-      [nombreDocumento]: nuevoArchivo,
+      [name]: value,
     }));
   };
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
-    // Aquí puedes manejar el envío del formulario
-    console.log("Documentos enviados");
-    if (onClose) onClose();
+    setLoading(true);
+
+    try {
+      // Verificar que todos los documentos requeridos estén subidos
+      const documentosFaltantes = documentos.filter(
+        (doc) => !formData.documentos[doc]
+      );
+
+      if (documentosFaltantes.length > 0) {
+        setError(`Faltan documentos: ${documentosFaltantes.join(", ")}`);
+        return;
+      }
+
+      const postulacionData = {
+        ...formData,
+        // Para reenvíos, incrementamos el contador de revisiones
+        revisiones: esReenvio ? formData.revisiones + 1 : formData.revisiones,
+        fechaActualizacion: serverTimestamp(),
+      };
+
+      if (esReenvio) {
+        // Actualizar postulación existente
+        await setDoc(doc(db, "postulaciones", codigoInicial), postulacionData, {
+          merge: true,
+        });
+      } else {
+        // Crear nueva postulación
+        const nuevaPostRef = doc(collection(db, "postulaciones"));
+        await setDoc(nuevaPostRef, {
+          ...postulacionData,
+          id: nuevaPostRef.id,
+        });
+      }
+
+      onClose();
+    } catch (error) {
+      console.error("Error al guardar postulación:", error);
+      setError("Error al guardar la postulación. Intente nuevamente.");
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
     <div className="form-container">
       <h2>{esReenvio ? "Reenvío de documentos" : "Nueva postulación"}</h2>
+      {error && <div className="error-message">{error}</div>}
+
       <form className="subidaForm" onSubmit={handleSubmit}>
         <label htmlFor="codigoProyecto">Código del Proyecto:</label>
         <input
           type="text"
           id="codigoProyecto"
-          value={codigoProyecto}
-          onChange={(e) => setCodigoProyecto(e.target.value)}
+          name="codigoProyecto"
+          value={formData.codigoProyecto}
+          onChange={handleChange}
           required
           disabled={esReenvio}
         />
@@ -132,8 +238,9 @@ const SubidaDocumentos = ({
         <label htmlFor="tipoVinculacion">Tipo de vinculación:</label>
         <select
           id="tipoVinculacion"
-          value={tipoVinculacion}
-          onChange={(e) => setTipoVinculacion(e.target.value)}
+          name="tipoVinculacion"
+          value={formData.tipoVinculacion}
+          onChange={handleChange}
           required
           disabled={esReenvio}
         >
@@ -146,9 +253,11 @@ const SubidaDocumentos = ({
         <label htmlFor="subvinculacion">Subcategoría:</label>
         <select
           id="subvinculacion"
-          value={subvinculacion}
-          onChange={(e) => setSubvinculacion(e.target.value)}
-          disabled={esReenvio}
+          name="subvinculacion"
+          value={formData.subvinculacion}
+          onChange={handleChange}
+          required
+          disabled={esReenvio || !formData.tipoVinculacion}
         >
           <option value="">Seleccione</option>
           {subvinculaciones.map((sub, i) => (
@@ -161,9 +270,10 @@ const SubidaDocumentos = ({
         <label htmlFor="nombrePostulante">Nombre del Postulante:</label>
         <input
           id="nombrePostulante"
+          name="nombrePostulante"
           type="text"
-          value={nombrePostulante}
-          onChange={(e) => setNombrePostulante(e.target.value)}
+          value={formData.nombrePostulante}
+          onChange={handleChange}
           required
           disabled={esReenvio}
         />
@@ -177,16 +287,20 @@ const SubidaDocumentos = ({
                 <input
                   type="file"
                   onChange={(e) => handleArchivo(e, doc)}
-                  disabled={formDisabled}
-                  required
+                  disabled={loading}
+                  required={!esReenvio} // En reenvíos no requerimos todos los documentos
+                  accept=".pdf,.jpg,.jpeg,.png"
                 />
+                {formData.documentos[doc] && (
+                  <span className="file-uploaded">✓ Subido</span>
+                )}
               </div>
             ))}
           </div>
         </div>
 
-        <button type="submit">
-          {esReenvio ? "Reenviar" : "Enviar"}
+        <button type="submit" disabled={loading}>
+          {loading ? "Procesando..." : esReenvio ? "Reenviar" : "Enviar"}
         </button>
       </form>
     </div>
