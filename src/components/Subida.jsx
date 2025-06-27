@@ -133,27 +133,35 @@ const SubidaDocumentos = ({
 
     const formDataCloud = new FormData();
     formDataCloud.append("file", file);
-    formDataCloud.append("upload_preset", "portal_umng_uploads"); // 👈 era `formData` mal escrito ahí
+    formDataCloud.append("upload_preset", "portal_umng_uploads");
     formDataCloud.append("folder", "portal_umng/postulaciones");
 
     try {
       const response = await fetch(
-        `https://api.cloudinary.com/v1_1/dchkzapvx/upload`, // 👈 pon directamente tu cloud name
+        `https://api.cloudinary.com/v1_1/dchkzapvx/upload`,
         {
           method: "POST",
           body: formDataCloud,
         }
       );
+
       const data = await response.json();
+
+      if (!data.secure_url || !data.public_id) {
+        throw new Error(
+          "La subida a Cloudinary no retornó la información esperada."
+        );
+      }
 
       setFormData((prev) => ({
         ...prev,
         documentos: {
           ...prev.documentos,
           [nombreDocumento]: {
+            nombre: file.name,
             url: data.secure_url,
             public_id: data.public_id,
-            fechaSubida: serverTimestamp(),
+            fechaSubida: new Date().toISOString(),
           },
         },
       }));
@@ -178,44 +186,62 @@ const SubidaDocumentos = ({
     setLoading(true);
 
     try {
-      // Verificar que todos los documentos requeridos estén subidos
       const documentosFaltantes = documentos.filter(
         (doc) => !formData.documentos[doc]
       );
 
       if (documentosFaltantes.length > 0) {
         setError(`Faltan documentos: ${documentosFaltantes.join(", ")}`);
+        setLoading(false);
         return;
       }
 
-      const postulacionData = {
-        ...formData,
-        // Para reenvíos, incrementamos el contador de revisiones
-        revisiones: esReenvio ? formData.revisiones + 1 : formData.revisiones,
-        fechaActualizacion: serverTimestamp(),
-      };
+      let postulacionId;
 
       if (esReenvio) {
-        // Actualizar postulación existente
-        await setDoc(doc(db, "postulaciones", codigoInicial), postulacionData, {
-          merge: true,
-        });
+        postulacionId = codigoInicial;
+        // Actualizar estado y contador de revisiones
+        await setDoc(
+          doc(db, "postulaciones", postulacionId),
+          {
+            fechaActualizacion: serverTimestamp(),
+            estado: "En corrección",
+            revisiones: formData.revisiones + 1,
+          },
+          { merge: true }
+        );
       } else {
-        // Crear nueva postulación
         const nuevaPostRef = doc(collection(db, "postulaciones"));
+        postulacionId = nuevaPostRef.id;
+
         await setDoc(nuevaPostRef, {
-          ...postulacionData,
-          id: nuevaPostRef.id,
+          ...formData,
+          id: postulacionId,
+          fechaCreacion: serverTimestamp(),
+          fechaActualizacion: serverTimestamp(),
+          estado: "Pendiente",
+          revisiones: 0,
         });
       }
 
-      onClose();
+      // Guardar documentos en una nueva revisión
+      const nuevaRevisionRef = doc(
+        collection(db, `postulaciones/${postulacionId}/revisiones`)
+      );
+
+      await setDoc(nuevaRevisionRef, {
+        numeroRevision: esReenvio ? formData.revisiones + 1 : 0,
+        documentos: formData.documentos,
+        fechaRevision: serverTimestamp(),
+        estado: "En revisión",
+      });
     } catch (error) {
-      console.error("Error al guardar postulación:", error);
+      console.error("Error al guardar la postulación:", error);
       setError("Error al guardar la postulación. Intente nuevamente.");
     } finally {
       setLoading(false);
     }
+    onClose();
   };
 
   return (

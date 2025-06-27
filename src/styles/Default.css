@@ -19,7 +19,7 @@ body {
   color: var(--color-texto-principal);
 }
 
-#root{
+#root {
   height: 100%;
   font-family: "Poppins", sans-serif;
 }
@@ -30,7 +30,7 @@ h1,
 h2,
 h3 {
   color: var(--color-primario);
-  font-family: 'Poppins';
+  font-family: "Poppins";
 }
 h2 {
   font-weight: 600;
@@ -99,6 +99,22 @@ button:hover {
   background-color: white;
   color: var(--color-primario);
   border: 2px solid var(--color-primario);
+}
+
+.btnAzul.disabled,
+.btnAzul:disabled {
+  background-color: #d3d3d3;
+  color: #7a7a7a;
+  border: none;
+  cursor: not-allowed;
+  pointer-events: none;
+}
+
+.btnAzul.disabled:hover,
+.btnAzul:disabled:hover {
+  background-color: #d3d3d3;
+  color: #7a7a7a;
+  border: none;
 }
 
 /* ========== ESTADOS ========== */

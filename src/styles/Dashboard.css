@@ -51,6 +51,22 @@ body {
   font-weight: 600;
 }
 
+.card.activa {
+  transform: scale(1.01);
+  box-shadow: rgba(0, 0, 0, 0.24) 0px 3px 8px;
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+  cursor: pointer;
+}
+
+.card:hover {
+  cursor: pointer;
+  transform: scale(1.02);
+}
+
+.card.activa:hover {
+  transform: scale(1.03);
+}
+
 .table-section {
   background: white;
   padding: 20px;

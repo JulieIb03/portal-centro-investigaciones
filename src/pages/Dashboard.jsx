@@ -33,6 +33,8 @@ const Dashboard = () => {
     Aprobado: 0,
   });
 
+  const [filtroEstado, setFiltroEstado] = useState(null);
+
   useEffect(() => {
     if (!user) return;
 
@@ -75,6 +77,10 @@ const Dashboard = () => {
     estudiantes: "Estudiantes",
   };
 
+  const postulacionesFiltradas = filtroEstado
+  ? postulaciones.filter((p) => p.estado === filtroEstado)
+  : postulaciones;
+
   return (
     <Header>
       <div className="dashboard">
@@ -87,8 +93,9 @@ const Dashboard = () => {
                   : key === "En corrección"
                   ? "en-correccion"
                   : "pendiente"
-              }`}
+              } ${filtroEstado === key ? "activa" : ""}`}
               key={key}
+              onClick={() => setFiltroEstado(filtroEstado === key ? null : key)} // Toggle
             >
               <div className="card-value">{value}</div>
               <div className="card-label">{key}</div>
@@ -126,7 +133,7 @@ const Dashboard = () => {
               </tr>
             </thead>
             <tbody>
-              {postulaciones.map((p, i) => (
+              {postulacionesFiltradas.map((p, i) => (
                 <tr
                   key={i}
                   onClick={() => navigate(`/detalle/${p.id}`)} // Usa p.id en lugar de p.codigo
