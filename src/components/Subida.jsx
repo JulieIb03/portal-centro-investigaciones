@@ -143,7 +143,7 @@ const SubidaDocumentos = ({
       const data = await response.json();
 
       if (!data.success || !data.url) {
-        throw new Error("La subida a GitHub falló.");
+        throw new Error("La subida a PDF.co falló.");
       }
 
       setFormData((prev) => ({
