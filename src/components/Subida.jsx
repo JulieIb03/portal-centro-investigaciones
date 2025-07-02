@@ -131,26 +131,19 @@ const SubidaDocumentos = ({
     setLoading(true);
     setError(null);
 
-    const formDataCloud = new FormData();
-    formDataCloud.append("file", file);
-    formDataCloud.append("upload_preset", "portal_umng_uploads");
-    formDataCloud.append("folder", "portal_umng/postulaciones");
+    const formDataArchivo = new FormData();
+    formDataArchivo.append("file", file);
 
     try {
-      const response = await fetch(
-        `https://api.cloudinary.com/v1_1/dchkzapvx/upload`,
-        {
-          method: "POST",
-          body: formDataCloud,
-        }
-      );
+      const response = await fetch("http://localhost:5000/upload", {
+        method: "POST",
+        body: formDataArchivo,
+      });
 
       const data = await response.json();
 
-      if (!data.secure_url || !data.public_id) {
-        throw new Error(
-          "La subida a Cloudinary no retornó la información esperada."
-        );
+      if (!data.success || !data.url) {
+        throw new Error("La subida a GitHub falló.");
       }
 
       setFormData((prev) => ({
@@ -159,8 +152,7 @@ const SubidaDocumentos = ({
           ...prev.documentos,
           [nombreDocumento]: {
             nombre: file.name,
-            url: data.secure_url,
-            public_id: data.public_id,
+            url: data.url,
             fechaSubida: new Date().toISOString(),
           },
         },
