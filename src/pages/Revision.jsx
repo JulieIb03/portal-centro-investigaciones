@@ -16,6 +16,8 @@ const RevisionDocumentos = () => {
   const [comentarios, setComentarios] = useState({});
   const [mostrarResumen, setMostrarResumen] = useState(false);
 
+  const [documentosRevisados, setDocumentosRevisados] = useState({});
+
   useEffect(() => {
     const fetchData = async () => {
       if (!id || !user) return;
@@ -33,14 +35,25 @@ const RevisionDocumentos = () => {
   }, [id, user, authLoading]);
 
   const handleComentarioChange = (e) => {
-    setComentarios({
-      ...comentarios,
-      [selectedDocKey]: e.target.value,
-    });
+    const valor = e.target.value;
+
+    setComentarios((prev) => ({
+      ...prev,
+      [selectedDocKey]: valor,
+    }));
+
+    // Si se escribe, y estaba marcado como aprobado, desmarcarlo
+    if (valor.trim() !== "" && documentosRevisados[selectedDocKey]) {
+      setDocumentosRevisados((prev) => ({
+        ...prev,
+        [selectedDocKey]: false,
+      }));
+    }
   };
 
   if (authLoading || loading) return <p>Cargando...</p>;
-  if (!postulacion || !selectedDocKey) return <p>Error cargando postulación.</p>;
+  if (!postulacion || !selectedDocKey)
+    return <p>Error cargando postulación.</p>;
 
   const documentos = postulacion.documentos || {};
   const documentoActual = documentos[selectedDocKey] || {};
@@ -54,96 +67,132 @@ const RevisionDocumentos = () => {
       .join(" ");
   };
 
+  const toggleDocumentoRevisado = (key) => {
+    setDocumentosRevisados((prev) => {
+      const nuevoEstado = !prev[key];
+      return { ...prev, [key]: nuevoEstado };
+    });
+
+    setComentarios((prev) => ({
+      ...prev,
+      [key]: prev[key] === "Aprobado" ? "" : "Aprobado",
+    }));
+  };
+
   return (
     <Header>
-      <div className="revision-grid">
-        {/* Selector de documentos */}
-        <div className="visor">
-          <select
-            value={selectedDocKey}
-            onChange={(e) => {
-              setSelectedDocKey(e.target.value);
-            }}
-            className="dropdown-selector"
-          >
-            {Object.keys(documentos).map((key) => (
-              <option key={key} value={key}>
-                {key}
-              </option>
-            ))}
-          </select>
+      {!mostrarResumen && (
+        <div className="revision-grid">
+          {/* Selector de documentos */}
+          <div className="visor">
+            <select
+              value={selectedDocKey}
+              onChange={(e) => {
+                setSelectedDocKey(e.target.value);
+              }}
+              className="dropdown-selector"
+            >
+              {Object.keys(documentos).map((key) => (
+                <option key={key} value={key}>
+                  {key}
+                </option>
+              ))}
+            </select>
 
-          {/* Visualización PDF */}
-          <iframe
-            src={documentoActual.url}
-            title={selectedDocKey}
-            width="100%"
-            height="500px"
-            style={{ border: "1px solid #ccc", borderRadius: "8px" }}
-          ></iframe>
+            {/* Visualización PDF */}
+            <iframe
+              src={documentoActual.url}
+              title={selectedDocKey}
+              width="100%"
+              height="100%"
+              style={{ border: "1px solid #ccc", borderRadius: "8px" }}
+            ></iframe>
 
-          <div className="paginacion">
-            Documento: <strong>{documentoActual.nombre}</strong>
+            <div className="paginacion">
+              Documento: <strong>{documentoActual.nombre}</strong>
+            </div>
+
+            <a
+              href={documentoActual.url}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="abrir-pdf-btn"
+            >
+              Abrir en otra pestaña
+            </a>
           </div>
 
-          <a
-            href={documentoActual.url}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="abrir-pdf-btn"
-          >
-            Abrir en otra pestaña
-          </a>
-        </div>
-
-        {/* Comentarios y detalle */}
-        <div className="informacion">
-          <div className="detalle-container">
-            <div className="info-card">
-              <div className="info">
-                <p>
-                  Código del proyecto<br />
-                  <strong>{postulacion.codigoProyecto}</strong>
-                </p>
-              </div>
-              <div className="info">
-                <p>
-                  Vinculación<br />
-                  <strong>{formatVinculacion(postulacion.tipoVinculacion)}</strong>
-                </p>
-              </div>
-              <div className="info">
-                <p>
-                  Tipo de contrato<br />
-                  <strong>{postulacion.subvinculacion}</strong>
-                </p>
-              </div>
-              <div className="info">
-                <p>
-                  Postulante<br />
-                  <strong>{postulacion.nombrePostulante}</strong>
-                </p>
+          {/* Comentarios y detalle */}
+          <div className="informacion">
+            <div className="detalle-container">
+              <div className="info-card">
+                <div className="info">
+                  <p>
+                    Código del proyecto
+                    <br />
+                    <strong>{postulacion.codigoProyecto}</strong>
+                  </p>
+                </div>
+                <div className="info">
+                  <p>
+                    Vinculación
+                    <br />
+                    <strong>
+                      {formatVinculacion(postulacion.tipoVinculacion)}
+                    </strong>
+                  </p>
+                </div>
+                <div className="info">
+                  <p>
+                    Tipo de contrato
+                    <br />
+                    <strong>{postulacion.subvinculacion}</strong>
+                  </p>
+                </div>
+                <div className="info">
+                  <p>
+                    Postulante
+                    <br />
+                    <strong>{postulacion.nombrePostulante}</strong>
+                  </p>
+                </div>
               </div>
             </div>
-          </div>
 
-          <div className="card revision-box">
-            <h3>Revisión</h3>
-            <label>
-              <input type="checkbox" /> {selectedDocKey}
-            </label>
-            <textarea
-              placeholder="Escribe tus comentarios..."
-              value={comentarios[selectedDocKey] || ""}
-              onChange={handleComentarioChange}
-            />
-          </div>
+            <div className="card revision-box">
+              <h3>Revisión</h3>
+              <label>
+                <input
+                  type="checkbox"
+                  checked={!!documentosRevisados[selectedDocKey]}
+                  onChange={() => toggleDocumentoRevisado(selectedDocKey)}
+                  disabled={
+                    comentarios[selectedDocKey] &&
+                    comentarios[selectedDocKey].trim() !== "" &&
+                    comentarios[selectedDocKey] !== "Aprobado"
+                  }
+                  style={{ accentColor: "#0b3c4d", marginRight: "0.5em" }}
+                />
+                {selectedDocKey}
+              </label>
 
-          <button onClick={() => setMostrarResumen(true)}>
-            Terminar Revisión
-          </button>
+              <textarea
+                placeholder="Escribe tus comentarios..."
+                value={comentarios[selectedDocKey] || ""}
+                onChange={handleComentarioChange}
+                disabled={documentosRevisados[selectedDocKey]}
+              />
+            </div>
+
+            <button
+              onClick={() => setMostrarResumen(true)}
+              style={{ width: "100%" }}
+            >
+              Terminar Revisión
+            </button>
+          </div>
         </div>
-      </div>
+      )}
 
       {mostrarResumen && (
         <div className="resumen-modal">
@@ -157,6 +206,7 @@ const RevisionDocumentos = () => {
                   setSelectedDocKey(key);
                   setMostrarResumen(false);
                 }}
+                class="btnAzul"
               >
                 Editar
               </button>

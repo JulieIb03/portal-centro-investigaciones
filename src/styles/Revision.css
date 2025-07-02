@@ -5,19 +5,46 @@
   grid-template-columns: 1fr 300px;
   gap: 1.5rem;
   padding: 2rem;
+  padding-bottom: 0;
 }
 
 .visor {
   display: flex;
   flex-direction: column;
   align-items: center;
+  justify-content: space-between;
 }
 
 .dropdown-selector {
-  margin-bottom: 1rem;
-  padding: 0.5rem;
-  font-size: 1rem;
   width: 100%;
+  padding: 0.5rem;
+  font-weight: 600;
+  font-family: inherit;
+  font-size: 0.95em;
+  margin-bottom: 1.5rem;
+  color: var(--color-primario);
+  border: 1px solid #ccc;
+  border-radius: 0.5em;
+  background-color: white;
+  appearance: none;
+  background-size: 1em;
+  cursor: pointer;
+  box-shadow: rgba(50, 50, 93, 0.25) 0px 13px 27px -5px,
+    rgba(0, 0, 0, 0.3) 0px 8px 16px -8px;
+  /* Flecha contorno personalizada */
+  appearance: none;
+  -webkit-appearance: none;
+  -moz-appearance: none;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='20' height='20' fill='none' stroke='%230b3c4d' stroke-width='2' viewBox='0 0 24 24'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 1em center;
+  background-size: 1.5em;
+  transition: border-color 0.2s ease;
+}
+
+.dropdown-selector:focus {
+  outline: none;
+  border: 2px solid var(--color-secundario, #f5af00); /* o el color que uses */
 }
 
 .documento {
@@ -41,8 +68,8 @@
   gap: 2rem;
 }
 
-.informacion .detalle-container{
-    padding: 0;
+.informacion .detalle-container {
+  padding: 0;
 }
 
 .card {
@@ -65,7 +92,7 @@
 }
 
 .revision-box textarea {
-  width: 100%;
+  width: 90%;
   height: 120px;
   margin-top: 0.5rem;
   padding: 0.75rem;
@@ -73,6 +100,14 @@
   border-radius: 6px;
   border: 1px solid #ccc;
   resize: vertical;
+  font-family: "Poppins";
+  color: var(--color-texto-principal);
+  background-color: var(--color-text-area);
+}
+
+.revision-box textarea:focus {
+  outline: none;
+  border: 1px solid var(--color-secundario);
 }
 
 /* Resumen de revisión */
@@ -83,11 +118,37 @@
   gap: 1.5rem;
 }
 
+.resumen-modal {
+  text-align: center;
+}
+
+.resumen-modal h2 {
+  text-align: start;
+}
+
 .resumen-card {
   display: flex;
-  justify-content: space-between;
-  align-items: flex-start;
-  gap: 1rem;
+  align-items: center;
+  gap: 2rem;
+  margin-bottom: 1.5rem;
+}
+
+.resumen-card h3,
+.resumen-card p,
+.resumen-card button {
+  margin: 0;
+}
+
+.resumen-card h3 {
+  width: 50%;
+}
+
+.resumen-card p {
+  width: 40%;
+}
+
+.resumen-card button {
+  width: 10%;
 }
 
 .abrir-pdf-btn {
@@ -104,5 +165,3 @@
 .abrir-pdf-btn:hover {
   background-color: #222;
 }
-
-

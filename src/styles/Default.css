@@ -10,9 +10,9 @@
   --color-pendiente: #f23030;
   --color-correccion: #f9b233;
   --color-aprobado: #4caf50;
+  --color-text-area: #F3F6FA;
 }
 body {
-  height: 100vh;
   font-family: "Poppins", sans-serif;
   background-color: #f3f4f7;
   padding: 30px;
