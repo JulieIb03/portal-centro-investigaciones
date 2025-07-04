@@ -1,40 +1,65 @@
 const express = require("express");
 const multer = require("multer");
-const axios = require("axios");
 const fs = require("fs");
-const FormData = require("form-data"); // 👈 asegúrate de tenerlo instalado
-require("dotenv").config();
+const path = require("path");
+const { google } = require("googleapis");
 
 const router = express.Router();
 const upload = multer({ dest: "uploads/" });
 
+const KEYFILEPATH = path.join(__dirname, "credentials-drive.json");
+const FOLDER_ID = "1hyIWDZ_wxq_UiLqqEQrSJBkAK7w-sWYu";
+
+const auth = new google.auth.GoogleAuth({
+  keyFile: KEYFILEPATH,
+  scopes: ["https://www.googleapis.com/auth/drive"],
+});
+
 router.post("/", upload.single("file"), async (req, res) => {
-  const { PDFCO_API_KEY } = process.env;
+  const file = req.file;
 
   try {
-    const file = req.file;
+    const driveService = google.drive({ version: "v3", auth: await auth.getClient() });
 
-    const formData = new FormData();
-    formData.append("file", fs.createReadStream(file.path), file.originalname); // 👈 usa fs.createReadStream
+    const fileMetadata = {
+      name: file.originalname,
+      parents: [FOLDER_ID],
+    };
 
-    const response = await axios.post("https://api.pdf.co/v1/file/upload", formData, {
-      headers: {
-        ...formData.getHeaders(),
-        "x-api-key": PDFCO_API_KEY,
+    const media = {
+      mimeType: file.mimetype,
+      body: fs.createReadStream(file.path),
+    };
+
+    const fileResponse = await driveService.files.create({
+      resource: fileMetadata,
+      media,
+      fields: "id, webViewLink, webContentLink",
+    });
+
+    // 👇 Dar acceso público al archivo
+    await driveService.permissions.create({
+      fileId: fileResponse.data.id,
+      requestBody: {
+        role: "reader",
+        type: "anyone",
       },
     });
 
-    // Limpieza
     fs.unlinkSync(file.path);
 
-    if (!response.data || !response.data.url) {
-      throw new Error("No se recibió una URL válida desde PDF.co");
-    }
+    const embedLink = `https://drive.google.com/file/d/${fileResponse.data.id}/preview`;
 
-    return res.json({ success: true, url: response.data.url });
+    return res.json({
+      success: true,
+      fileId: fileResponse.data.id,
+      viewLink: fileResponse.data.webViewLink,
+      downloadLink: fileResponse.data.webContentLink,
+      embedLink,
+    });
   } catch (error) {
-    console.error("❌ Error al subir a PDF.co:", error.response?.data || error.message);
-    return res.status(500).json({ success: false, error: "Error al subir a PDF.co" });
+    console.error("❌ Error al subir a Google Drive:", error.message);
+    return res.status(500).json({ success: false, error: "Error al subir a Google Drive" });
   }
 });
 

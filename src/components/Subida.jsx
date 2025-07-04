@@ -142,8 +142,8 @@ const SubidaDocumentos = ({
 
       const data = await response.json();
 
-      if (!data.success || !data.url) {
-        throw new Error("La subida a PDF.co falló.");
+      if (!data.success || !data.embedLink) {
+        throw new Error("La subida a Google Drive falló.");
       }
 
       setFormData((prev) => ({
@@ -152,7 +152,7 @@ const SubidaDocumentos = ({
           ...prev.documentos,
           [nombreDocumento]: {
             nombre: file.name,
-            url: data.url,
+            url: data.embedLink, // 👈 usar el embedLink directamente
             fechaSubida: new Date().toISOString(),
           },
         },

@@ -3,7 +3,15 @@ import { useParams } from "react-router-dom";
 import Header from "../layout/Header";
 import { useAuth } from "../components/Auth/AuthProvider";
 import { db } from "../Credenciales";
-import { doc, getDoc } from "firebase/firestore";
+import {
+  doc,
+  getDoc,
+  collection,
+  addDoc,
+  updateDoc,
+  arrayUnion,
+} from "firebase/firestore";
+import { useNavigate } from "react-router-dom";
 import "../styles/Revision.css";
 
 const RevisionDocumentos = () => {
@@ -17,6 +25,31 @@ const RevisionDocumentos = () => {
   const [mostrarResumen, setMostrarResumen] = useState(false);
 
   const [documentosRevisados, setDocumentosRevisados] = useState({});
+
+  const [revisorNombre, setRevisorNombre] = useState("");
+
+  const navigate = useNavigate();
+
+  //Traer nombre de revisor
+  useEffect(() => {
+    const fetchNombreRevisor = async () => {
+      if (!user?.uid) return;
+
+      try {
+        const userDocRef = doc(db, "usuarios", user.uid);
+        const userDocSnap = await getDoc(userDocRef);
+
+        if (userDocSnap.exists()) {
+          const userData = userDocSnap.data();
+          setRevisorNombre(userData.nombre || ""); // 👈 Nombre del revisor
+        }
+      } catch (err) {
+        console.error("Error al obtener el nombre del revisor:", err);
+      }
+    };
+
+    fetchNombreRevisor();
+  }, [user]);
 
   useEffect(() => {
     const fetchData = async () => {
@@ -101,7 +134,9 @@ const RevisionDocumentos = () => {
 
             {/* Visualización PDF */}
             <iframe
-              src={documentoActual.url}
+              src={`https://docs.google.com/gview?url=https://drive.google.com/uc?id=${
+                documentoActual.url.split("/d/")[1]?.split("/")[0]
+              }&export=download&embedded=true`}
               title={selectedDocKey}
               width="100%"
               height="100%"
@@ -212,7 +247,50 @@ const RevisionDocumentos = () => {
               </button>
             </div>
           ))}
-          <button onClick={() => alert("✅ Revisión finalizada")}>
+          <button
+            onClick={async () => {
+              const todosAprobados = Object.values(comentarios).every(
+                (c) => c.trim().toLowerCase() === "aprobado"
+              );
+
+              const nuevoEstado = todosAprobados ? "Aprobado" : "En corrección";
+              const numeroRevision = (postulacion.revisiones || 0) + 1;
+
+              const nuevaRevision = {
+                codigoProyecto: postulacion.codigoProyecto,
+                postulacionId: id,
+                revisorId: user.uid,
+                revisorNombre: revisorNombre,
+                nombrePostulante: postulacion.nombrePostulante,
+                estadoFinal: nuevoEstado,
+                numeroRevision,
+                comentarios,
+                fechaRevision: new Date().toISOString(),
+              };
+
+              try {
+                // 1. Crear documento en la colección "revisiones"
+                const nuevaDocRef = await addDoc(
+                  collection(db, "revisiones"),
+                  nuevaRevision
+                );
+                const revisionId = nuevaDocRef.id;
+
+                // 2. Actualizar postulación con nuevo estado, número y agregar ID de revisión
+                const postulacionRef = doc(db, "postulaciones", id);
+                await updateDoc(postulacionRef, {
+                  revisiones: numeroRevision,
+                  estado: nuevoEstado,
+                  revisionIds: arrayUnion(revisionId), //
+                });
+
+                navigate("/Dashboard");
+              } catch (error) {
+                console.error("Error al guardar la revisión:", error);
+                alert("❌ Ocurrió un error al guardar la revisión");
+              }
+            }}
+          >
             Finalizar Revisión
           </button>
         </div>
