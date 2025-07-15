@@ -249,45 +249,94 @@ const RevisionDocumentos = () => {
           ))}
           <button
             onClick={async () => {
-              const todosAprobados = Object.values(comentarios).every(
-                (c) => c.trim().toLowerCase() === "aprobado"
-              );
-
-              const nuevoEstado = todosAprobados ? "Aprobado" : "En corrección";
-              const numeroRevision = (postulacion.revisiones || 0) + 1;
-
-              const nuevaRevision = {
-                codigoProyecto: postulacion.codigoProyecto,
-                postulacionId: id,
-                revisorId: user.uid,
-                revisorNombre: revisorNombre,
-                nombrePostulante: postulacion.nombrePostulante,
-                estadoFinal: nuevoEstado,
-                numeroRevision,
-                comentarios,
-                fechaRevision: new Date().toISOString(),
-              };
-
               try {
-                // 1. Crear documento en la colección "revisiones"
+                const todosAprobados = Object.values(comentarios).every(
+                  (c) => c.trim().toLowerCase() === "aprobado"
+                );
+                const nuevoEstado = todosAprobados
+                  ? "Aprobado"
+                  : "En corrección";
+                const numeroRevision = (postulacion.revisiones || 0) + 1;
+
+                const nuevaRevision = {
+                  codigoProyecto: postulacion.codigoProyecto,
+                  postulacionId: id,
+                  revisorId: user.uid,
+                  revisorNombre: revisorNombre,
+                  nombrePostulante: postulacion.nombrePostulante,
+                  estadoFinal: nuevoEstado,
+                  numeroRevision,
+                  comentarios,
+                  fechaRevision: new Date().toISOString(),
+                };
+
+                console.log("📌 1. Creando revisión...");
                 const nuevaDocRef = await addDoc(
                   collection(db, "revisiones"),
                   nuevaRevision
                 );
                 const revisionId = nuevaDocRef.id;
+                console.log("✅ Revisión guardada con ID:", revisionId);
 
-                // 2. Actualizar postulación con nuevo estado, número y agregar ID de revisión
+                console.log("📌 2. Actualizando postulación...");
                 const postulacionRef = doc(db, "postulaciones", id);
                 await updateDoc(postulacionRef, {
                   revisiones: numeroRevision,
                   estado: nuevoEstado,
-                  revisionIds: arrayUnion(revisionId), //
+                  revisionIds: arrayUnion(revisionId),
+                });
+                console.log("✅ Postulación actualizada");
+
+                console.log("📌 3. Obteniendo datos del docente...");
+                const usuarioDoc = await getDoc(
+                  doc(db, "usuarios", postulacion.usuarioId)
+                );
+
+                if (!usuarioDoc.exists())
+                  throw new Error("No se encontró información del docente");
+
+                const correoDocente = usuarioDoc.data().correo;
+                const nombreDocente = usuarioDoc.data().nombre;
+
+                if (!correoDocente)
+                  throw new Error("No se encontró correo del docente");
+
+                console.log("📧 Correo del docente:", correoDocente);
+                console.log("👤 Nombre del docente:", nombreDocente);
+
+                console.log("📤 4. Enviando correo...");
+
+                const res = await fetch("http://localhost:5000/send-email", {
+                  method: "POST",
+                  headers: { "Content-Type": "application/json" },
+                  body: JSON.stringify({
+                    to: correoDocente,
+                    subject: `📝 Revisión ${nuevoEstado} - Proyecto ${postulacion.codigoProyecto}`,
+                    template: "plantillaRevision",
+                    variables: {
+                      NOMBRE_DOCENTE: nombreDocente,
+                      NOMBRE_POSTULANTE: postulacion.nombrePostulante,
+                      CODIGO_PROYECTO: postulacion.codigoProyecto,
+                      TIPO_VINCULACION: postulacion.tipoVinculacion,
+                      TIPO_CONTRATO: postulacion.subvinculacion,
+                      ESTADO: nuevoEstado,
+                    },
+                  }),
                 });
 
+                if (!res.ok) {
+                  const errorText = await res.text();
+                  console.error("❌ Error al enviar correo:", errorText);
+                  throw new Error("Falló el envío de correo");
+                }
+
+                console.log("✅ Correo enviado");
                 navigate("/Dashboard");
               } catch (error) {
-                console.error("Error al guardar la revisión:", error);
-                alert("❌ Ocurrió un error al guardar la revisión");
+                console.error("❌ Error al procesar la revisión:", error);
+                alert(
+                  "❌ Ocurrió un error al guardar la revisión o enviar el correo"
+                );
               }
             }}
           >

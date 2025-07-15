@@ -1,0 +1,90 @@
+<body
+  style="
+    font-family: Montserrat, sans-serif;
+    margin: 0;
+    padding: 0;
+    background-color: #f4f4f4;
+    color: #5b5b5b;
+  "
+>
+  <div
+    style="
+      background-color: #043144;
+      padding: 20px;
+      text-align: center;
+    "
+  >
+    <img
+      alt="Logo UMNG"
+      class="header-logo"
+      src="https://i.ibb.co/QZndfNM/Logo-UMNG-8bb99b40804dbb5b1de3.png"
+      style="max-height: 60px"
+    />
+    <h3 style="color: white;margin: 10px 0;">Portal Centro de Investigaciones</h3>
+  </div>
+  <div
+    style="
+      background-color: #ffffff;
+      margin: 20px;
+      padding: 20px;
+      border-radius: 8px;
+      width: 700px;
+      margin: 30px auto;
+    "
+  >
+    <h1 style="color: #043144">Resultado de la revisión de tu postulación</h1>
+
+    <h2 style="color: #5b5b5b">
+      Proyecto: <span style="font-weight: normal">{{CODIGO_PROYECTO}}</span>
+    </h2>
+    <p>Estimado/a <strong>{{NOMBRE_DOCENTE}}</strong>,</p>
+
+    <p>
+      Hemos completado el proceso de revisión de los documentos enviados para la
+      postulación de <strong>{{NOMBRE_POSTULANTE}}</strong> al proyecto
+      <strong>{{CODIGO_PROYECTO}}</strong>. Esta postulación corresponde a una
+      <strong>{{TIPO_VINCULACION}}</strong> bajo la modalidad de
+      <strong>{{TIPO_CONTRATO}}</strong>. El resultado general de esta revisión
+      ha sido:
+    </p>
+
+    <div
+      style="background-color: {{COLOR_FONDO_ESTADO}}; color: {{COLOR_ESTADO}};padding: 0.5em;border-radius: 5px;text-align: center;font-size: 1.2em;font-weight: bold;max-width: 300px;margin: auto;"
+    >
+      {{ESTADO}}
+    </div>
+
+    <br />
+
+    {{#IF_EN_CORRECCION}}
+    <p>
+      Algunos de tus documentos necesitan ser corregidos. Te invitamos a
+      ingresar a la plataforma para consultar los comentarios específicos
+      realizados por el revisor. Podrás reenviar únicamente los documentos que
+      requieren ajustes.
+    </p>
+    {{/IF_EN_CORRECCION}} {{#IF_APROBADO}}
+    <p>
+      Todos los documentos presentados han sido aprobados. Tu postulación ahora
+      se encuentra en estado aprobado y no requiere más acciones de tu parte en
+      esta etapa.
+    </p>
+    {{/IF_APROBADO}}
+
+    <hr style="margin: 2em 0" />
+
+    <p style="font-size: 0.9em; color: #666">
+      Si tienes preguntas o necesitas soporte, puedes comunicarte con el equipo
+      del Centro de Investigaciones.
+    </p>
+
+    <p style="margin-top: 2em">
+      Atentamente,<br />
+      <strong>Equipo de Revisores</strong><br />
+      Centro de Investigaciones UMNG
+    </p>
+  </div>
+  <div
+    style="background-color: #043144; padding: 10px; text-align: center"
+  ></div>
+</body>
