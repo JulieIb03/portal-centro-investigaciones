@@ -8,9 +8,9 @@ import {
   doc,
   getDoc,
   collection,
-  query,
-  where,
-  getDocs,
+  // query,
+  // where,
+  // getDocs,
 } from "firebase/firestore";
 import { db } from "../Credenciales";
 import { useAuth } from "../components/Auth/AuthProvider";
@@ -30,12 +30,12 @@ const Modal = ({ children, onClose }) => {
 
 const DetallePostulacion = () => {
   const { id } = useParams();
-  const { user, loading: authLoading } = useAuth(); // Renombramos loading de AuthProvider
+  const { user, loading: authLoading } = useAuth();
 
   const [open, setOpen] = useState(false);
   const [postulacion, setPostulacion] = useState(null);
   const [historial, setHistorial] = useState([]);
-  const [localLoading, setLocalLoading] = useState(true); // <--- cambio aquí
+  const [localLoading, setLocalLoading] = useState(true);
   const [error, setError] = useState(null);
 
   const navigate = useNavigate();
@@ -59,39 +59,64 @@ const DetallePostulacion = () => {
 
       const obtenerPostulacionYRevisiones = async () => {
         try {
-          const docRef = doc(db, "postulaciones", id);
-          const docSnap = await getDoc(docRef);
+          // 1. Obtener la postulación
+          const postulacionRef = doc(db, "postulaciones", id);
+          const postulacionSnap = await getDoc(postulacionRef);
 
-          if (!docSnap.exists()) {
+          if (!postulacionSnap.exists()) {
             setError("No se encontró la postulación.");
             return;
           }
 
-          const data = docSnap.data();
-          console.log("🔍 Postulación cargada:", data);
+          const postulacionData = postulacionSnap.data();
+          console.log("🔍 Postulación cargada:", postulacionData);
 
-          if (user.rol === "docente" && data.usuarioId !== user.uid) {
+          if (
+            user.rol === "docente" &&
+            postulacionData.usuarioId !== user.uid
+          ) {
             setError("No tienes permiso para ver esta postulación.");
             return;
           }
 
-          setPostulacion(data);
+          setPostulacion(postulacionData);
 
-          const revisionesRef = collection(
-            db,
-            `postulaciones/${id}/revisiones`
-          );
-          const revisionesSnap = await getDocs(revisionesRef);
-          const revisionesData = revisionesSnap.docs
-            .map((revisionDoc) => ({
-              id: revisionDoc.id,
-              ...revisionDoc.data(),
-            }))
-            .sort(
-              (a, b) => b.fechaCreacion?.seconds - a.fechaCreacion?.seconds
-            ); // más recientes primero
+          // 2. Obtener las revisiones relacionadas
+          if (
+            postulacionData.revisionIds &&
+            postulacionData.revisionIds.length > 0
+          ) {
+            const revisionesCollection = collection(db, "revisiones");
+            const revisionesPromises = postulacionData.revisionIds.map(
+              (revisionId) => getDoc(doc(revisionesCollection, revisionId))
+            );
 
-          setHistorial(revisionesData);
+            const revisionesSnaps = await Promise.all(revisionesPromises);
+
+            const revisionesData = revisionesSnaps
+              .map((revisionSnap) => ({
+                id: revisionSnap.id,
+                ...revisionSnap.data(),
+              }))
+              .sort((a, b) => b.numeroRevision - a.numeroRevision); // más recientes primero
+
+            setHistorial(revisionesData);
+          } else {
+            // Si no hay revisiones, mostramos la postulación como "revisión inicial"
+            setHistorial([
+              {
+                id: postulacionData.id,
+                estadoFinal: postulacionData.estado,
+                fechaRevision:
+                  postulacionData.fechaActualizacion ||
+                  postulacionData.fechaCreacion,
+                numeroRevision: 0,
+                postulacionId: postulacionData.id,
+                comentarios: {},
+                documentos: postulacionData.documentos,
+              },
+            ]);
+          }
         } catch (err) {
           console.error("Error al cargar la postulación o revisiones:", err);
           setError("Ocurrió un error al obtener la información.");
@@ -104,11 +129,10 @@ const DetallePostulacion = () => {
     }
   }, [user, id, authLoading]);
 
-  if (authLoading || localLoading) return <p>Cargando...</p>; // Usa ambos
+  if (authLoading || localLoading) return <p>Cargando...</p>;
   if (error) return <p>{error}</p>;
   if (!postulacion) return null;
 
-  // Función para formatear fechas de Firestore
   const formatDate = (fecha) => {
     if (!fecha) return "No especificada";
     try {
@@ -126,13 +150,44 @@ const DetallePostulacion = () => {
     }
   };
 
-  //Dunción para formatear los tipos de vinculación
   const formatVinculacion = (texto) => {
     if (!texto) return "";
     return texto
       .split("_")
       .map((palabra) => palabra.charAt(0).toUpperCase() + palabra.slice(1))
       .join(" ");
+  };
+
+  const formatComentarios = (comentarios) => {
+    if (!comentarios || Object.keys(comentarios).length === 0) {
+      return user?.rol === "revisor" ? "Sin comentarios" : "Sin observaciones";
+    }
+
+    return (
+      <ul style={{ paddingLeft: "1rem" }}>
+        {Object.entries(comentarios).map(([doc, comentario], i) => (
+          <li key={i}>
+            <strong>{doc}</strong>: {comentario}
+          </li>
+        ))}
+      </ul>
+    );
+  };
+
+  const formatDocumentos = (documentos) => {
+    if (!documentos) return "Sin documentos";
+
+    return (
+      <ul style={{ paddingLeft: "1rem" }}>
+        {Object.entries(documentos).map(([titulo, datos], i) => (
+          <li key={i}>
+            <strong>{titulo}</strong>
+            <br />
+            {datos.nombre || "Documento sin nombre"}
+          </li>
+        ))}
+      </ul>
+    );
   };
 
   return (
@@ -267,20 +322,14 @@ const DetallePostulacion = () => {
             {user?.rol === "docente" && (
               <button
                 className={`btnAzul ${
-                  postulacion.estado.toLowerCase() !== "aprobado" ||
-                  postulacion.revisiones === 0
-                    ? "disabled"
-                    : ""
+                  postulacion.estado !== "En corrección" ? "disabled" : ""
                 }`}
                 onClick={() => {
-                  if (
-                    postulacion.estado.toLowerCase() === "aprobado" &&
-                    postulacion.revisiones > 0
-                  ) {
+                  if (postulacion.estado === "En corrección") {
                     setOpen(true);
                   }
                 }}
-                disabled={historial.length > 0}
+                disabled={postulacion.estado !== "En corrección"}
               >
                 Reenviar documentos
               </button>
@@ -290,10 +339,15 @@ const DetallePostulacion = () => {
           {open && (
             <Modal onClose={() => setOpen(false)}>
               <SubidaDocumentos
+                postulacionId={postulacion.id}
                 codigoProyecto={postulacion.codigoProyecto}
                 nombrePostulante={postulacion.nombrePostulante}
                 tipoVinculacion={postulacion.tipoVinculacion}
                 subvinculacion={postulacion.subvinculacion}
+                documentosPostulacion={postulacion.documentos}
+                ultimaRevisionId={
+                  postulacion.revisionIds[postulacion.revisionIds.length - 1]
+                }
                 onClose={() => setOpen(false)}
               />
             </Modal>
@@ -309,94 +363,77 @@ const DetallePostulacion = () => {
                   {user?.rol === "revisor" ? "Documentos" : "Comentarios"}
                 </th>
                 <th>Fecha de revisión</th>
+                <th>Revisor(a)</th>
               </tr>
             </thead>
 
             <tbody>
-              {/* 1. Si es DOCENTE y no hay revisiones */}
-              {user?.rol === "docente" && postulacion.revisiones === 0 ? (
+              {user?.rol === "docente" && historial.length === 0 ? (
                 <tr>
-                  <td colSpan="6" style={{ textAlign: "center" }}>
+                  <td colSpan="7" style={{ textAlign: "center" }}>
                     No hay historial de revisiones.
                   </td>
                 </tr>
-              ) : postulacion.revisiones !== 0 ? (
-                (() => {
-                  console.log("✅ Hay revisiones, mostrar detalles");
-                  return (
-                    <tr
-                      key={postulacion.id}
-                      className={user?.rol === "revisor" ? "clickable-row" : ""}
-                      onClick={() => {
-                        if (user?.rol === "revisor")
-                          navigate(`/revision/${id}`);
-                      }}
-                    >
-                      <td>{postulacion.id || id}</td>
-                      <td>{formatDate(postulacion.fechaCreacion)}</td>
-                      <td>{postulacion.revisiones}</td>
-                      <td className={postulacion.estado?.replace(/\s/g, "-")}>
-                        {postulacion.estado || "Pendiente"}
-                      </td>
-                      <td>
-                        {user?.rol === "revisor" && postulacion.documentos ? (
-                          <ul style={{ paddingLeft: "1rem" }}>
-                            {Object.entries(postulacion.documentos).map(
-                              ([titulo, datos], i) => (
-                                <li key={i}>
-                                  <strong>{titulo}</strong>
-                                  <br />
-                                  {datos.nombre || "Documento sin nombre"}
-                                </li>
-                              )
-                            )}
-                          </ul>
-                        ) : (
-                          "Sin comentarios"
+              ) : user?.rol === "revisor" && historial.length === 0 ? (
+                <tr
+                  className="clickable-row"
+                  onClick={() => navigate(`/revision/${postulacion.id}`)}
+                >
+                  <td>{postulacion.id}</td>
+                  <td>{formatDate(postulacion.fechaCreacion)}</td>
+                  <td>0</td>
+                  <td className={postulacion.estado?.replace(/\s/g, "-")}>
+                    {postulacion.estado || "Pendiente"}
+                  </td>
+                  <td>
+                    {postulacion.documentos ? (
+                      <ul style={{ paddingLeft: "1rem" }}>
+                        {Object.entries(postulacion.documentos).map(
+                          ([titulo, datos], i) => (
+                            <li key={i}>
+                              <strong>{titulo}</strong>
+                              <br />
+                              {datos.nombre || "Documento sin nombre"}
+                            </li>
+                          )
                         )}
-                      </td>
-                      <td>{formatDate(postulacion.fechaActualizacion)}</td>
-                    </tr>
-                  );
-                })()
-              ) : user?.rol === "revisor" ? (
-                (() => {
-                  console.log(
-                    "📄 No hay revisiones y es revisor. Mostrar datos iniciales"
-                  );
-                  return (
-                    <tr
-                      className="clickable-row"
-                      onClick={() => navigate(`/revision/${id}`)}
-                    >
-                      <td>{postulacion.id || id}</td>
-                      <td>{formatDate(postulacion.fechaCreacion)}</td>
-                      <td>{postulacion.revisiones}</td>
-                      <td className={postulacion.estado?.replace(/\s/g, "-")}>
-                        {postulacion.estado || "Pendiente"}
-                      </td>
-                      <td>
-                        {postulacion.documentos ? (
-                          <ul style={{ paddingLeft: "1rem" }}>
-                            {Object.entries(postulacion.documentos).map(
-                              ([titulo, datos], i) => (
-                                <li key={i}>
-                                  <strong>{titulo}</strong>
-                                  <br />
-                                  {datos.nombre || "Documento sin nombre"}
-                                </li>
-                              )
-                            )}
-                          </ul>
-                        ) : (
-                          "Sin documentos"
-                        )}
-                      </td>
-                      <td>Sin revisiones</td>
-                    </tr>
-                  );
-                })()
-              ) : null}
+                      </ul>
+                    ) : (
+                      "Sin documentos"
+                    )}
+                  </td>
+                  <td>Sin revisión</td>
+                  <td>No asignado</td>
+                </tr>
+              ) : (
+                historial.map((revision) => (
+                  <tr
+                    key={revision.id}
+                    className={user?.rol === "revisor" ? "clickable-row" : ""}
+                    onClick={() => {
+                      if (user?.rol === "revisor") {
+                        navigate(`/revision/${postulacion.id}`);
+                      }
+                    }}
+                  >
+                    <td>{postulacion.id}</td>
+                    <td>{formatDate(postulacion.fechaCreacion)}</td>
+                    <td>{revision.numeroRevision || 0}</td>
+                    <td className={revision.estadoFinal?.replace(/\s/g, "-")}>
+                      {revision.estadoFinal || "Pendiente"}
+                    </td>
+                    <td>
+                      {user?.rol === "revisor"
+                        ? formatDocumentos(
+                            revision.documentos || postulacion.documentos
+                          )
+                        : formatComentarios(revision.comentarios)}
+                    </td>
+                    <td>{formatDate(revision.fechaRevision)}</td>
+                    <td>{revision.revisorNombre || "No asignado"}</td>
+                  </tr>
+                ))
+              )}
             </tbody>
           </table>
         </div>

@@ -2,7 +2,13 @@ import React, { useState, useEffect } from "react";
 import "../styles/Default.css";
 import "../styles/components/Subida.css";
 import { db } from "../Credenciales";
-import { doc, setDoc, collection, serverTimestamp } from "firebase/firestore";
+import {
+  doc,
+  setDoc,
+  collection,
+  serverTimestamp,
+  getDoc,
+} from "firebase/firestore";
 import { useAuth } from "./Auth/AuthProvider";
 
 // Constantes fuera del componente para evitar ciclos infinitos
@@ -59,22 +65,21 @@ const documentosRequeridos = {
 };
 
 const SubidaDocumentos = ({
+  postulacionId: postulacionId = "",
   codigoProyecto: codigoInicial = "",
   nombrePostulante: nombreInicial = "",
   tipoVinculacion: tipoVinculacionInicial = "",
   subvinculacion: subvinculacionInicial = "",
+  documentosPostulacion = {},
+  ultimaRevisionId = null,
   onClose,
 }) => {
   const { user } = useAuth();
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
+  const [ultimaRevision, setUltimaRevision] = useState(null);
 
-  const esReenvio = !!(
-    codigoInicial ||
-    nombreInicial ||
-    tipoVinculacionInicial ||
-    subvinculacionInicial
-  );
+  const esReenvio = !!postulacionId;
 
   const [formData, setFormData] = useState({
     codigoProyecto: codigoInicial,
@@ -91,6 +96,77 @@ const SubidaDocumentos = ({
 
   const [subvinculaciones, setSubvinculaciones] = useState([]);
   const [documentos, setDocumentos] = useState([]);
+
+  // Obtener la última revisión cuando es reenvío
+  useEffect(() => {
+    const obtenerUltimaRevision = async () => {
+      if (!esReenvio || !codigoInicial || !ultimaRevisionId) {
+        console.log("No se buscará revisión porque:", {
+          esReenvio,
+          codigoInicial,
+          ultimaRevisionId,
+        });
+        return;
+      }
+
+      console.log(
+        "ID de última revisión que se intentará consultar:",
+        ultimaRevisionId
+      ); // 👈 Mostrar ID
+
+      try {
+        const revisionRef = doc(db, `/revisiones`, ultimaRevisionId);
+        const revisionSnap = await getDoc(revisionRef);
+
+        if (revisionSnap.exists()) {
+          const revisionData = revisionSnap.data();
+          setUltimaRevision(revisionData);
+
+          // Procesar documentos aprobados y no aprobados
+          const documentosCombinados = {};
+
+          // 1. Documentos aprobados
+          if (revisionData.comentarios) {
+            Object.entries(revisionData.comentarios).forEach(
+              ([docNombre, estado]) => {
+                if (estado === "Aprobado") {
+                  // Buscar el documento en la postulación o en la revisión
+                  const docData =
+                    documentosPostulacion[docNombre] ||
+                    revisionData.documentos?.[docNombre];
+                  if (docData) {
+                    documentosCombinados[docNombre] = docData;
+                  }
+                }
+              }
+            );
+          }
+
+          // 2. Agregar documentos no aprobados pero existentes
+          Object.entries(documentosPostulacion).forEach(
+            ([docNombre, docData]) => {
+              if (
+                !documentosCombinados[docNombre] &&
+                (!revisionData.comentarios ||
+                  revisionData.comentarios[docNombre] !== "Aprobado")
+              ) {
+                documentosCombinados[docNombre] = docData;
+              }
+            }
+          );
+
+          setFormData((prev) => ({
+            ...prev,
+            documentos: documentosCombinados,
+          }));
+        }
+      } catch (error) {
+        console.error("Error al obtener última revisión:", error);
+      }
+    };
+
+    obtenerUltimaRevision();
+  }, [esReenvio, codigoInicial, ultimaRevisionId, documentosPostulacion]);
 
   useEffect(() => {
     if (formData.tipoVinculacion) {
@@ -110,10 +186,16 @@ const SubidaDocumentos = ({
     }
   }, [formData.subvinculacion]);
 
+  const documentoEstaAprobado = (nombreDocumento) => {
+    return ultimaRevision?.comentarios?.[nombreDocumento] === "Aprobado";
+  };
+
   const MAX_FILE_SIZE = 5 * 1024 * 1024; // 5MB
   const ALLOWED_TYPES = ["application/pdf"];
 
   const handleArchivo = async (e, nombreDocumento) => {
+    if (documentoEstaAprobado(nombreDocumento)) return;
+
     const file = e.target.files[0];
 
     if (!file) return;
@@ -174,66 +256,105 @@ const SubidaDocumentos = ({
   };
 
   const handleSubmit = async (e) => {
+    console.log("🧪 esReenvio:", esReenvio);
+    console.log("📄 Documentos actuales:", formData.documentos);
+
     e.preventDefault();
     setLoading(true);
+    setError(null); // Limpiar errores anteriores
 
     try {
+      // Validación de documentos faltantes (solo los no aprobados)
       const documentosFaltantes = documentos.filter(
-        (doc) => !formData.documentos[doc]
+        (doc) => !formData.documentos[doc] && !documentoEstaAprobado(doc)
       );
 
       if (documentosFaltantes.length > 0) {
-        setError(`Faltan documentos: ${documentosFaltantes.join(", ")}`);
+        setError(
+          `Faltan documentos requeridos: ${documentosFaltantes.join(", ")}`
+        );
         setLoading(false);
         return;
       }
 
-      let postulacionId;
-
       if (esReenvio) {
-        postulacionId = codigoInicial;
-        // Actualizar estado y contador de revisiones
+        // ─── REENVIO DE DOCUMENTOS ───
+        const postulacionRef = doc(db, "postulaciones", postulacionId);
+
+        console.log("🔄 Reenvío activado");
+        console.log("📄 ID postulación objetivo:", codigoInicial);
+        console.log("👤 UID del usuario autenticado:", user?.uid);
+        console.log("📄 Documentos a subir:", formData.documentos);
+
+        // 1. Filtrar solo los documentos que fueron modificados (nuevos o actualizados)
+        const documentosActualizados = {};
+        Object.entries(formData.documentos).forEach(([docNombre, docData]) => {
+          // Solo incluir documentos que no estaban aprobados o que son nuevos
+          if (!documentoEstaAprobado(docNombre)) {
+            documentosActualizados[docNombre] = docData;
+          }
+        });
+
+        // 2. Actualizar solo los documentos modificados en la postulación principal
         await setDoc(
-          doc(db, "postulaciones", postulacionId),
+          postulacionRef,
           {
             fechaActualizacion: serverTimestamp(),
-            estado: "En corrección",
-            revisiones: formData.revisiones + 1,
+            documentos: documentosActualizados,
           },
           { merge: true }
         );
       } else {
+        // ─── NUEVA POSTULACIÓN ───
         const nuevaPostRef = doc(collection(db, "postulaciones"));
-        postulacionId = nuevaPostRef.id;
+        const postulacionId = nuevaPostRef.id;
 
+        // 3.1 Crear documento principal
         await setDoc(nuevaPostRef, {
           ...formData,
           id: postulacionId,
           fechaCreacion: serverTimestamp(),
           fechaActualizacion: serverTimestamp(),
           estado: "Pendiente",
-          revisiones: 0,
+          revisiones: 1, // Iniciar en 1 porque crearemos la primera revisión
+          revisionIds: [], // Inicializar array de IDs de revisiones
         });
+
+        // 3.2 Crear primera revisión
+        const nuevaRevisionRef = doc(
+          collection(db, `postulaciones/${postulacionId}/revisiones`)
+        );
+
+        const revisionData = {
+          numeroRevision: 1,
+          documentos: formData.documentos,
+          fechaRevision: serverTimestamp(),
+          estado: "En revisión",
+          postulacionId: postulacionId,
+        };
+
+        await setDoc(nuevaRevisionRef, revisionData);
+
+        // 3.3 Actualizar postulación con ID de la revisión
+        await setDoc(
+          nuevaPostRef,
+          {
+            revisionIds: [nuevaRevisionRef.id],
+          },
+          { merge: true }
+        );
       }
 
-      // Guardar documentos en una nueva revisión
-      const nuevaRevisionRef = doc(
-        collection(db, `postulaciones/${postulacionId}/revisiones`)
-      );
-
-      await setDoc(nuevaRevisionRef, {
-        numeroRevision: esReenvio ? formData.revisiones + 1 : 0,
-        documentos: formData.documentos,
-        fechaRevision: serverTimestamp(),
-        estado: "En revisión",
-      });
+      // Cerrar modal solo si todo fue exitoso
+      onClose();
     } catch (error) {
-      console.error("Error al guardar la postulación:", error);
-      setError("Error al guardar la postulación. Intente nuevamente.");
+      console.error("Error en el proceso:", error);
+      setError(
+        error.message || "Error al procesar la solicitud. Intente nuevamente."
+      );
     } finally {
       setLoading(false);
     }
-    onClose();
   };
 
   return (
@@ -299,21 +420,46 @@ const SubidaDocumentos = ({
         <div id="documentosContainer">
           <h3>Documentos Requeridos</h3>
           <div id="documentosLista">
-            {documentos.map((doc, i) => (
-              <div key={i} style={{ margin: "10px 0" }}>
-                <label>{doc}</label>
-                <input
-                  type="file"
-                  onChange={(e) => handleArchivo(e, doc)}
-                  disabled={loading}
-                  required={!esReenvio} // En reenvíos no requerimos todos los documentos
-                  accept=".pdf,.jpg,.jpeg,.png"
-                />
-                {formData.documentos[doc] && (
-                  <span className="file-uploaded">✓ Subido</span>
-                )}
-              </div>
-            ))}
+            {documentos.map((docNombre, i) => {
+              const aprobado = documentoEstaAprobado(docNombre);
+              const docData = formData.documentos[docNombre];
+
+              return (
+                <div key={i} style={{ margin: "10px 0" }}>
+                  <label>{docNombre}</label>
+                  {aprobado ? (
+                    <div className="documento-aprobado">
+                      ✓ {docData?.nombre || "Documento aprobado"}
+                      {docData?.url && (
+                        <a
+                          href={docData.url}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          style={{ marginLeft: "10px", color: "#1a73e8" }}
+                        >
+                          (Ver documento)
+                        </a>
+                      )}
+                    </div>
+                  ) : (
+                    <>
+                      <input
+                        type="file"
+                        onChange={(e) => handleArchivo(e, docNombre)}
+                        disabled={loading || aprobado}
+                        required={!esReenvio && !aprobado}
+                        accept=".pdf"
+                      />
+                      {docData && !aprobado && (
+                        <span className="file-uploaded">
+                          ✓ {docData.nombre}
+                        </span>
+                      )}
+                    </>
+                  )}
+                </div>
+              );
+            })}
           </div>
         </div>
 

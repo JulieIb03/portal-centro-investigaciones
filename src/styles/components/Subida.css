@@ -65,3 +65,17 @@
   border-radius: 6px;
   font-family: 'Poppins';
 }
+
+.documento-aprobado {
+  padding: 8px;
+  background-color: #e8f5e9;
+  border-radius: 4px;
+  color: var(--color-aprobado);
+  margin-top: 5px;
+}
+
+.file-uploaded {
+  color: var(--color-aprobado);
+  margin-left: 10px;
+  font-size: 0.9em;
+}
