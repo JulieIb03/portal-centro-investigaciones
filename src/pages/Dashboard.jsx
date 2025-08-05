@@ -77,9 +77,25 @@ const Dashboard = () => {
     estudiantes: "Estudiantes",
   };
 
-  const postulacionesFiltradas = filtroEstado
-  ? postulaciones.filter((p) => p.estado === filtroEstado)
-  : postulaciones;
+  const postulacionesFiltradas = (() => {
+    let filtradas = [];
+
+    if (filtroEstado === "Aprobado") {
+      filtradas = postulaciones.filter((p) => p.estado === "Aprobado");
+    } else if (filtroEstado) {
+      filtradas = postulaciones.filter((p) => p.estado === filtroEstado);
+    } else {
+      filtradas = postulaciones.filter(
+        (p) => p.estado === "Pendiente" || p.estado === "En corrección"
+      );
+    }
+
+    return filtradas.sort((a, b) => {
+      const fechaA = a.fechaActualizacion?.toDate?.() || new Date(0);
+      const fechaB = b.fechaActualizacion?.toDate?.() || new Date(0);
+      return fechaB - fechaA; // Más recientes primero
+    });
+  })();
 
   return (
     <Header>
@@ -105,13 +121,29 @@ const Dashboard = () => {
 
         <section className="table-section">
           <div className="table-header">
-            <h2>Todas las postulaciones</h2>
-            {/* Muestra el botón solo si el rol es docente */}
-            {user?.rol === "docente" && (
-              <button className="btnAzul" onClick={() => setOpen(true)}>
-                Nueva postulación
-              </button>
-            )}
+            <h2>
+              {filtroEstado
+                ? `Postulaciones: ${filtroEstado}`
+                : "Postulaciones recientes"}
+            </h2>
+            <div className="acciones-header">
+              {user?.rol === "docente" && (
+                <>
+                  {filtroEstado && (
+                    <button
+                      className="btnAzul"
+                      onClick={() => setFiltroEstado(null)}
+                      style={{ marginRight: "10px" }}
+                    >
+                      Ver todas
+                    </button>
+                  )}
+                  <button className="btnAzul" onClick={() => setOpen(true)}>
+                    Nueva postulación
+                  </button>
+                </>
+              )}
+            </div>
           </div>
 
           {/* Muestra el modal solo si el rol es docente */}

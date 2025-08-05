@@ -112,6 +112,10 @@ const RevisionDocumentos = () => {
     }));
   };
 
+  const hayPendientes = Object.keys(documentos).some(
+    (key) => !documentosRevisados[key] && !comentarios[key]?.trim()
+  );
+
   return (
     <Header>
       {!mostrarResumen && (
@@ -196,7 +200,22 @@ const RevisionDocumentos = () => {
 
             <div className="card revision-box">
               <h3>Revisión</h3>
-              <label>
+              <label style={{ fontWeight: "600" }}>{selectedDocKey}</label>
+
+              <textarea
+                placeholder="Escribe tus comentarios..."
+                value={comentarios[selectedDocKey] || ""}
+                onChange={handleComentarioChange}
+                disabled={documentosRevisados[selectedDocKey]}
+              />
+
+              <label
+                style={{
+                  display: "flex",
+                  alignItems: "center",
+                  marginTop: "1em",
+                }}
+              >
                 <input
                   type="checkbox"
                   checked={!!documentosRevisados[selectedDocKey]}
@@ -208,15 +227,8 @@ const RevisionDocumentos = () => {
                   }
                   style={{ accentColor: "#0b3c4d", marginRight: "0.5em" }}
                 />
-                {selectedDocKey}
+                Aprobar Documento
               </label>
-
-              <textarea
-                placeholder="Escribe tus comentarios..."
-                value={comentarios[selectedDocKey] || ""}
-                onChange={handleComentarioChange}
-                disabled={documentosRevisados[selectedDocKey]}
-              />
             </div>
 
             <button
@@ -235,7 +247,18 @@ const RevisionDocumentos = () => {
           {Object.entries(documentos).map(([key, doc]) => (
             <div key={key} className="card resumen-card">
               <h3>{key}</h3>
-              <p>{comentarios[key] || "Sin comentarios"}</p>
+              <p
+                style={{
+                  color:
+                    !documentosRevisados[key] && !comentarios[key]?.trim()
+                      ? "red"
+                      : "inherit",
+                }}
+              >
+                {!documentosRevisados[key] && !comentarios[key]?.trim()
+                  ? "⚠️ Este documento no ha sido aprobado ni tiene comentarios. Debe agregar un comentario si no se aprueba."
+                  : comentarios[key] || "Sin comentarios"}
+              </p>
               <button
                 onClick={() => {
                   setSelectedDocKey(key);
@@ -248,14 +271,32 @@ const RevisionDocumentos = () => {
             </div>
           ))}
           <button
+            disabled={hayPendientes}
+            className={hayPendientes ? "disabled" : ""}
             onClick={async () => {
+              if (hayPendientes) return;
               try {
-                const todosAprobados = Object.values(comentarios).every(
-                  (c) => c.trim().toLowerCase() === "aprobado"
+                const todosRevisados = Object.keys(documentos).every((key) => {
+                  const comentario = comentarios[key]?.trim() || "";
+                  const aprobado = documentosRevisados[key];
+                  return aprobado || comentario !== "";
+                });
+
+                if (!todosRevisados) {
+                  alert(
+                    "Por favor revisa todos los documentos. Cada uno debe ser aprobado o tener comentarios."
+                  );
+                  return;
+                }
+
+                const todosAprobados = Object.keys(documentos).every(
+                  (key) => comentarios[key]?.trim().toLowerCase() === "aprobado"
                 );
+
                 const nuevoEstado = todosAprobados
                   ? "Aprobado"
                   : "En corrección";
+
                 const numeroRevision = (postulacion.revisiones || 0) + 1;
 
                 const nuevaRevision = {

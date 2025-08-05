@@ -101,11 +101,6 @@ const SubidaDocumentos = ({
   useEffect(() => {
     const obtenerUltimaRevision = async () => {
       if (!esReenvio || !codigoInicial || !ultimaRevisionId) {
-        console.log("No se buscará revisión porque:", {
-          esReenvio,
-          codigoInicial,
-          ultimaRevisionId,
-        });
         return;
       }
 
@@ -215,6 +210,9 @@ const SubidaDocumentos = ({
 
     const formDataArchivo = new FormData();
     formDataArchivo.append("file", file);
+    formDataArchivo.append("codigoProyecto", formData.codigoProyecto);
+    formDataArchivo.append("usuarioEmail", user.nombre);
+    formDataArchivo.append("nombrePostulante", formData.nombrePostulante);
 
     try {
       const response = await fetch("http://localhost:5000/upload", {
@@ -304,6 +302,24 @@ const SubidaDocumentos = ({
           },
           { merge: true }
         );
+
+        // // 3. Crear nueva revisión solo con los documentos actualizados
+        // if (Object.keys(documentosActualizados).length > 0) {
+        //   const nuevaRevisionRef = doc(
+        //     collection(db, `postulaciones/${codigoInicial}/revisiones`)
+        //   );
+
+        //   await setDoc(nuevaRevisionRef, {
+        //     numeroRevision: formData.revisiones + 1,
+        //     documentos: documentosActualizados,
+        //     fechaRevision: serverTimestamp(),
+        //     estado: "En revisión",
+        //     postulacionId: codigoInicial,
+        //     revisorId: null,
+        //     revisorNombre: null,
+        //     comentarios: {},
+        //   });
+        // }
       } else {
         // ─── NUEVA POSTULACIÓN ───
         const nuevaPostRef = doc(collection(db, "postulaciones"));

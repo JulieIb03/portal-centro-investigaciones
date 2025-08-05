@@ -66,6 +66,12 @@ body {
   transform: scale(1.03);
 }
 
+.acciones-header {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
 .table-section {
   background: white;
   padding: 20px;
