@@ -8,6 +8,11 @@ import {
   collection,
   serverTimestamp,
   getDoc,
+  query,
+  where,
+  getDocs,
+  updateDoc,
+  arrayUnion,
 } from "firebase/firestore";
 import { useAuth } from "./Auth/AuthProvider";
 
@@ -303,62 +308,143 @@ const SubidaDocumentos = ({
           { merge: true }
         );
 
-        // // 3. Crear nueva revisión solo con los documentos actualizados
-        // if (Object.keys(documentosActualizados).length > 0) {
-        //   const nuevaRevisionRef = doc(
-        //     collection(db, `postulaciones/${codigoInicial}/revisiones`)
-        //   );
+        //Notificación por correo de resubida
+        const revisorId = ultimaRevision?.revisorId;
 
-        //   await setDoc(nuevaRevisionRef, {
-        //     numeroRevision: formData.revisiones + 1,
-        //     documentos: documentosActualizados,
-        //     fechaRevision: serverTimestamp(),
-        //     estado: "En revisión",
-        //     postulacionId: codigoInicial,
-        //     revisorId: null,
-        //     revisorNombre: null,
-        //     comentarios: {},
-        //   });
-        // }
+        if (!revisorId) {
+          console.log("❌ No se encontró el revisor de la última revisión.");
+        } else {
+          try {
+            const revisorDoc = await getDoc(doc(db, "usuarios", revisorId));
+            if (!revisorDoc.exists()) {
+              console.log(`❌ No se encontró el usuario con ID: ${revisorId}`);
+            } else {
+              const revisor = revisorDoc.data();
+
+              const res = await fetch("http://localhost:5000/send-email", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({
+                  to: revisor.correo,
+                  subject: `📄 Documentos corregidos - Proyecto ${formData.codigoProyecto}`,
+                  template: "plantillaReenvio",
+                  variables: {
+                    NOMBRE_REVISOR: revisor.nombre || "Revisor",
+                    NOMBRE_POSTULANTE: formData.nombrePostulante,
+                    CODIGO_PROYECTO: formData.codigoProyecto,
+                    TIPO_VINCULACION: formData.tipoVinculacion,
+                    TIPO_CONTRATO: formData.subvinculacion,
+                    FECHA_POSTULACION: new Date().toLocaleDateString(),
+                    FECHA_REVISION: new Date().toLocaleDateString(),
+                    NOMBRE_DOCENTE: user.nombre || "Docente responsable",
+                  },
+                }),
+              });
+
+              if (!res.ok) {
+                const errorText = await res.text();
+                console.error(
+                  `Error al enviar correo a ${revisor.correo}:`,
+                  errorText
+                );
+              } else {
+                console.log(`✅ Correo enviado a ${revisor.correo}`);
+              }
+            }
+          } catch (error) {
+            console.error("Error al obtener revisor o enviar correo:", error);
+          }
+        }
       } else {
         // ─── NUEVA POSTULACIÓN ───
         const nuevaPostRef = doc(collection(db, "postulaciones"));
         const postulacionId = nuevaPostRef.id;
 
-        // 3.1 Crear documento principal
+        // Crear documento principal
         await setDoc(nuevaPostRef, {
           ...formData,
           id: postulacionId,
           fechaCreacion: serverTimestamp(),
           fechaActualizacion: serverTimestamp(),
           estado: "Pendiente",
-          revisiones: 1, // Iniciar en 1 porque crearemos la primera revisión
+          revisiones: 0,
           revisionIds: [], // Inicializar array de IDs de revisiones
         });
 
-        // 3.2 Crear primera revisión
-        const nuevaRevisionRef = doc(
-          collection(db, `postulaciones/${postulacionId}/revisiones`)
-        );
+        //Notificación por correo
+        console.log("📌 Buscando usuarios con rol 'revisor'...");
+        const usuariosRef = collection(db, "usuarios");
 
-        const revisionData = {
-          numeroRevision: 1,
-          documentos: formData.documentos,
-          fechaRevision: serverTimestamp(),
-          estado: "En revisión",
-          postulacionId: postulacionId,
-        };
+        const q = query(usuariosRef, where("rol", "==", "revisor"));
+        const querySnapshot = await getDocs(q);
 
-        await setDoc(nuevaRevisionRef, revisionData);
+        if (querySnapshot.empty) {
+          console.log("❌ No se encontraron usuarios con rol 'revisor'");
+        } else {
+          console.log("✅ Usuarios con rol 'revisor' encontrados:");
+          const revisores = [];
+          querySnapshot.forEach((doc) => {
+            const usuario = doc.data();
+            console.log(
+              `- ${usuario.nombre || "Sin nombre"} (${
+                usuario.correo || "Sin correo"
+              })`
+            );
 
-        // 3.3 Actualizar postulación con ID de la revisión
-        await setDoc(
-          nuevaPostRef,
-          {
-            revisionIds: [nuevaRevisionRef.id],
-          },
-          { merge: true }
-        );
+            if (usuario.correo) {
+              revisores.push({
+                id: doc.id,
+                nombre: usuario.nombre || "Revisor",
+                correo: usuario.correo,
+              });
+            }
+          });
+
+          console.log(`📧 Total de revisores encontrados: ${revisores.length}`);
+          console.log("👤 Lista completa de revisores:", revisores);
+
+          // Enviar correos en paralelo
+          await Promise.all(
+            revisores.map(async (revisor) => {
+              try {
+                const res = await fetch("http://localhost:5000/send-email", {
+                  method: "POST",
+                  headers: { "Content-Type": "application/json" },
+                  body: JSON.stringify({
+                    to: revisor.correo,
+                    subject: `📝 Nueva postulación - Proyecto ${formData.codigoProyecto}`,
+                    template: "plantillaNuevaPostulacion",
+                    variables: {
+                      NOMBRE_REVISOR: revisor.nombre,
+                      NOMBRE_POSTULANTE: formData.nombrePostulante,
+                      CODIGO_PROYECTO: formData.codigoProyecto,
+                      TIPO_VINCULACION: formData.tipoVinculacion,
+                      TIPO_CONTRATO: formData.subvinculacion,
+                      FECHA_POSTULACION: new Date().toLocaleDateString(),
+                      FECHA_REVISION: new Date().toLocaleDateString(),
+                      NOMBRE_DOCENTE: user.nombre || "Docente responsable",
+                    },
+                  }),
+                });
+
+                if (!res.ok) {
+                  const errorText = await res.text();
+                  console.error(
+                    `Error al enviar correo a ${revisor.correo}:`,
+                    errorText
+                  );
+                } else {
+                  console.log(`✅ Correo enviado a ${revisor.correo}`);
+                }
+              } catch (error) {
+                console.error(
+                  `Error al enviar correo a ${revisor.correo}:`,
+                  error
+                );
+              }
+            })
+          );
+        }
       }
 
       // Cerrar modal solo si todo fue exitoso

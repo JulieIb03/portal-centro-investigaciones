@@ -127,21 +127,21 @@ const Dashboard = () => {
                 : "Postulaciones recientes"}
             </h2>
             <div className="acciones-header">
+              {filtroEstado && (
+                <button
+                  className="btnAzul"
+                  onClick={() => setFiltroEstado(null)}
+                  style={{ marginRight: "10px" }}
+                >
+                  Ver todas
+                </button>
+              )}
+
+              {/* "Nueva postulación" solo para docentes */}
               {user?.rol === "docente" && (
-                <>
-                  {filtroEstado && (
-                    <button
-                      className="btnAzul"
-                      onClick={() => setFiltroEstado(null)}
-                      style={{ marginRight: "10px" }}
-                    >
-                      Ver todas
-                    </button>
-                  )}
-                  <button className="btnAzul" onClick={() => setOpen(true)}>
-                    Nueva postulación
-                  </button>
-                </>
+                <button className="btnAzul" onClick={() => setOpen(true)}>
+                  Nueva postulación
+                </button>
               )}
             </div>
           </div>

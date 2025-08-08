@@ -6,6 +6,7 @@ import Registro from "./components/Auth/Registro";
 import Login from "./components/Auth/Login";
 import Logout from "./components/Auth/Logout";
 import Dashboard from "./pages/Dashboard";
+import EditarDocumentos from "./pages/EditarDocumentos";
 import DetallePostulacion from "./pages/DetallePostulacion";
 import Revision from "./pages/Revision";
 import { AuthProvider } from "./components/Auth/AuthProvider";
@@ -21,6 +22,7 @@ function App() {
           <Route path="/logout" element={<Logout />} />
           <Route element={<ProtectedRoute />}>
             <Route path="/dashboard" element={<Dashboard />} />
+            <Route path="/EditarDocumentos" element={<EditarDocumentos />} />
             <Route path="/detalle/:id" element={<DetallePostulacion />} />
             <Route path="/revision/:id" element={<Revision />} />
           </Route>

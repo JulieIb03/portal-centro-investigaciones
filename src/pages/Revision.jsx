@@ -10,9 +10,15 @@ import {
   addDoc,
   updateDoc,
   arrayUnion,
+  query,
+  where,
+  getDocs,
+  orderBy,
+  limit,
 } from "firebase/firestore";
 import { useNavigate } from "react-router-dom";
 import "../styles/Revision.css";
+import "../styles/components/Loader.css";
 
 const RevisionDocumentos = () => {
   const { id } = useParams();
@@ -23,10 +29,25 @@ const RevisionDocumentos = () => {
   const [selectedDocKey, setSelectedDocKey] = useState(null);
   const [comentarios, setComentarios] = useState({});
   const [mostrarResumen, setMostrarResumen] = useState(false);
-
   const [documentosRevisados, setDocumentosRevisados] = useState({});
-
   const [revisorNombre, setRevisorNombre] = useState("");
+  const [ultimaRevision, setUltimaRevision] = useState(null);
+  const [bloqueados, setBloqueados] = useState({});
+  const [comentariosPrevios, setComentariosPrevios] = useState({});
+  const [isSubmitting, setIsSubmitting] = useState(false);
+
+  const DotSpinner = () => (
+    <div className="dot-spinner">
+      <div className="dot-spinner__dot"></div>
+      <div className="dot-spinner__dot"></div>
+      <div className="dot-spinner__dot"></div>
+      <div className="dot-spinner__dot"></div>
+      <div className="dot-spinner__dot"></div>
+      <div className="dot-spinner__dot"></div>
+      <div className="dot-spinner__dot"></div>
+      <div className="dot-spinner__dot"></div>
+    </div>
+  );
 
   const navigate = useNavigate();
 
@@ -41,7 +62,7 @@ const RevisionDocumentos = () => {
 
         if (userDocSnap.exists()) {
           const userData = userDocSnap.data();
-          setRevisorNombre(userData.nombre || ""); // 👈 Nombre del revisor
+          setRevisorNombre(userData.nombre || "");
         }
       } catch (err) {
         console.error("Error al obtener el nombre del revisor:", err);
@@ -51,19 +72,96 @@ const RevisionDocumentos = () => {
     fetchNombreRevisor();
   }, [user]);
 
+  // Buscar la última revisión si existe
+  const buscarUltimaRevision = async (postulacionData) => {
+    try {
+      if (
+        !postulacionData.revisionIds ||
+        postulacionData.revisionIds.length === 0
+      ) {
+        return null;
+      }
+
+      const ultimoRevisionId =
+        postulacionData.revisionIds[postulacionData.revisionIds.length - 1];
+      const revisionDocRef = doc(db, "revisiones", ultimoRevisionId);
+      const revisionDocSnap = await getDoc(revisionDocRef);
+
+      if (revisionDocSnap.exists()) {
+        const revisionData = revisionDocSnap.data();
+        setUltimaRevision(revisionData);
+
+        // Guardar los comentarios previos
+        const previos = {};
+        Object.keys(revisionData.comentarios || {}).forEach((key) => {
+          if (revisionData.comentarios[key] !== "Aprobado") {
+            previos[key] = revisionData.comentarios[key];
+          }
+        });
+        setComentariosPrevios(previos);
+
+        return revisionData;
+      }
+      return null;
+    } catch (error) {
+      console.error("Error buscando última revisión:", error);
+      return null;
+    }
+  };
+
   useEffect(() => {
     const fetchData = async () => {
       if (!id || !user) return;
+
       const docRef = doc(db, "postulaciones", id);
       const docSnap = await getDoc(docRef);
+
       if (docSnap.exists()) {
         const data = docSnap.data();
         setPostulacion(data);
-        const primeraClave = Object.keys(data.documentos || {})[0];
-        setSelectedDocKey(primeraClave);
+
+        // Buscar última revisión si hay revisionIds
+        if (data.revisionIds && data.revisionIds.length > 0) {
+          const ultimaRev = await buscarUltimaRevision(data);
+
+          if (ultimaRev) {
+            const nuevosComentarios = {};
+            const nuevosRevisados = {};
+            const nuevosBloqueados = {};
+
+            Object.keys(data.documentos || {}).forEach((key) => {
+              const comentario = ultimaRev.comentarios?.[key] || "";
+              nuevosComentarios[key] = comentario;
+              nuevosRevisados[key] = comentario === "Aprobado";
+              nuevosBloqueados[key] = comentario === "Aprobado";
+            });
+
+            setComentarios(nuevosComentarios);
+            setDocumentosRevisados(nuevosRevisados);
+            setBloqueados(nuevosBloqueados);
+
+            // Seleccionar el primer documento no aprobado
+            const documentosOrdenados = Object.keys(data.documentos || {}).sort(
+              (a, b) => {
+                const aAprobado = nuevosRevisados[a] || false;
+                const bAprobado = nuevosRevisados[b] || false;
+                if (aAprobado && !bAprobado) return 1;
+                if (!aAprobado && bAprobado) return -1;
+                return 0;
+              }
+            );
+
+            setSelectedDocKey(documentosOrdenados[0]);
+          }
+        } else {
+          // Si no hay revisiones previas, seleccionar el primer documento
+          const primeraClave = Object.keys(data.documentos || {})[0];
+          setSelectedDocKey(primeraClave);
+        }
       }
       setLoading(false);
     };
+
     if (!authLoading) fetchData();
   }, [id, user, authLoading]);
 
@@ -74,14 +172,6 @@ const RevisionDocumentos = () => {
       ...prev,
       [selectedDocKey]: valor,
     }));
-
-    // Si se escribe, y estaba marcado como aprobado, desmarcarlo
-    if (valor.trim() !== "" && documentosRevisados[selectedDocKey]) {
-      setDocumentosRevisados((prev) => ({
-        ...prev,
-        [selectedDocKey]: false,
-      }));
-    }
   };
 
   if (authLoading || loading) return <p>Cargando...</p>;
@@ -90,6 +180,14 @@ const RevisionDocumentos = () => {
 
   const documentos = postulacion.documentos || {};
   const documentoActual = documentos[selectedDocKey] || {};
+
+  console.log("Estado actual:", {
+    selectedDocKey,
+    documentoActual,
+    comentarios,
+    documentosRevisados,
+    bloqueados,
+  });
 
   // Formateo útil para campos como tipoVinculacion
   const formatVinculacion = (texto) => {
@@ -101,17 +199,22 @@ const RevisionDocumentos = () => {
   };
 
   const toggleDocumentoRevisado = (key) => {
-    setDocumentosRevisados((prev) => {
-      const nuevoEstado = !prev[key];
-      return { ...prev, [key]: nuevoEstado };
-    });
+    if (bloqueados[key]) return;
 
+    const nuevoEstado = !documentosRevisados[key];
+
+    // Actualizar estado de aprobación
+    setDocumentosRevisados((prev) => ({
+      ...prev,
+      [key]: nuevoEstado,
+    }));
+
+    // Actualizar comentario automáticamente
     setComentarios((prev) => ({
       ...prev,
-      [key]: prev[key] === "Aprobado" ? "" : "Aprobado",
+      [key]: nuevoEstado ? "Aprobado" : "",
     }));
   };
-
   const hayPendientes = Object.keys(documentos).some(
     (key) => !documentosRevisados[key] && !comentarios[key]?.trim()
   );
@@ -124,41 +227,55 @@ const RevisionDocumentos = () => {
           <div className="visor">
             <select
               value={selectedDocKey}
-              onChange={(e) => {
-                setSelectedDocKey(e.target.value);
-              }}
+              onChange={(e) => setSelectedDocKey(e.target.value)}
               className="dropdown-selector"
             >
-              {Object.keys(documentos).map((key) => (
-                <option key={key} value={key}>
-                  {key}
-                </option>
-              ))}
+              {Object.keys(documentos || {})
+                .sort((a, b) => {
+                  // Solo ordenar si hay una revisión previa
+                  if (ultimaRevision) {
+                    const aAprobado = documentosRevisados[a] || false;
+                    const bAprobado = documentosRevisados[b] || false;
+                    if (aAprobado && !bAprobado) return 1;
+                    if (!aAprobado && bAprobado) return -1;
+                  }
+                  return 0;
+                })
+                .map((key) => (
+                  <option key={key} value={key}>
+                    {key} {documentosRevisados[key] ? " ✓" : ""}
+                  </option>
+                ))}
             </select>
 
             {/* Visualización PDF */}
-            <iframe
-              src={`https://docs.google.com/gview?url=https://drive.google.com/uc?id=${
-                documentoActual.url.split("/d/")[1]?.split("/")[0]
-              }&export=download&embedded=true`}
-              title={selectedDocKey}
-              width="100%"
-              height="100%"
-              style={{ border: "1px solid #ccc", borderRadius: "8px" }}
-            ></iframe>
+            {selectedDocKey && documentos[selectedDocKey]?.url && (
+              <iframe
+                src={`https://docs.google.com/gview?url=https://drive.google.com/uc?id=${
+                  documentos[selectedDocKey].url.split("/d/")[1]?.split("/")[0]
+                }&export=download&embedded=true`}
+                title={selectedDocKey}
+                width="100%"
+                height="100%"
+                style={{ border: "1px solid #ccc", borderRadius: "8px" }}
+              />
+            )}
 
             <div className="paginacion">
-              Documento: <strong>{documentoActual.nombre}</strong>
+              Documento:{" "}
+              <strong>{documentos[selectedDocKey]?.nombre || ""}</strong>
             </div>
 
-            <a
-              href={documentoActual.url}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="abrir-pdf-btn"
-            >
-              Abrir en otra pestaña
-            </a>
+            {documentos[selectedDocKey]?.url && (
+              <a
+                href={documentos[selectedDocKey].url}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="abrir-pdf-btn"
+              >
+                Abrir en otra pestaña
+              </a>
+            )}
           </div>
 
           {/* Comentarios y detalle */}
@@ -203,10 +320,22 @@ const RevisionDocumentos = () => {
               <label style={{ fontWeight: "600" }}>{selectedDocKey}</label>
 
               <textarea
-                placeholder="Escribe tus comentarios..."
-                value={comentarios[selectedDocKey] || ""}
+                placeholder={
+                  bloqueados[selectedDocKey]
+                    ? "Documento ya aprobado"
+                    : comentariosPrevios[selectedDocKey]
+                    ? `Comentario anterior: ${comentariosPrevios[selectedDocKey]}`
+                    : "Escribe tus comentarios..."
+                }
+                value={
+                  bloqueados[selectedDocKey]
+                    ? "Aprobado"
+                    : ultimaRevision && !documentosRevisados[selectedDocKey]
+                    ? ""
+                    : comentarios[selectedDocKey] || ""
+                }
                 onChange={handleComentarioChange}
-                disabled={documentosRevisados[selectedDocKey]}
+                disabled={bloqueados[selectedDocKey]}
               />
 
               <label
@@ -220,19 +349,24 @@ const RevisionDocumentos = () => {
                   type="checkbox"
                   checked={!!documentosRevisados[selectedDocKey]}
                   onChange={() => toggleDocumentoRevisado(selectedDocKey)}
-                  disabled={
-                    comentarios[selectedDocKey] &&
-                    comentarios[selectedDocKey].trim() !== "" &&
-                    comentarios[selectedDocKey] !== "Aprobado"
-                  }
-                  style={{ accentColor: "#0b3c4d", marginRight: "0.5em" }}
+                  disabled={bloqueados[selectedDocKey]}
+                  style={{
+                    accentColor: "#0b3c4d",
+                    marginRight: "0.5em",
+                    cursor: bloqueados[selectedDocKey]
+                      ? "not-allowed"
+                      : "pointer",
+                  }}
                 />
                 Aprobar Documento
               </label>
             </div>
 
             <button
-              onClick={() => setMostrarResumen(true)}
+              onClick={() => {
+                console.log("Mostrando resumen de revisión");
+                setMostrarResumen(true);
+              }}
               style={{ width: "100%" }}
             >
               Terminar Revisión
@@ -259,15 +393,18 @@ const RevisionDocumentos = () => {
                   ? "⚠️ Este documento no ha sido aprobado ni tiene comentarios. Debe agregar un comentario si no se aprueba."
                   : comentarios[key] || "Sin comentarios"}
               </p>
-              <button
-                onClick={() => {
-                  setSelectedDocKey(key);
-                  setMostrarResumen(false);
-                }}
-                class="btnAzul"
-              >
-                Editar
-              </button>
+              {!bloqueados[key] && (
+                <button
+                  onClick={() => {
+                    console.log("Editando documento:", key);
+                    setSelectedDocKey(key);
+                    setMostrarResumen(false);
+                  }}
+                  class="btnAzul"
+                >
+                  Editar
+                </button>
+              )}
             </div>
           ))}
           <button
@@ -275,6 +412,8 @@ const RevisionDocumentos = () => {
             className={hayPendientes ? "disabled" : ""}
             onClick={async () => {
               if (hayPendientes) return;
+              setIsSubmitting(true);
+
               try {
                 const todosRevisados = Object.keys(documentos).every((key) => {
                   const comentario = comentarios[key]?.trim() || "";
@@ -378,10 +517,12 @@ const RevisionDocumentos = () => {
                 alert(
                   "❌ Ocurrió un error al guardar la revisión o enviar el correo"
                 );
+              } finally {
+                setIsSubmitting(false);
               }
             }}
           >
-            Finalizar Revisión
+            {isSubmitting ? <DotSpinner /> : "Finalizar Revisión"}
           </button>
         </div>
       )}
