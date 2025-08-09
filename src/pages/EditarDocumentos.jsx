@@ -5,6 +5,7 @@ import { db } from "../Credenciales";
 import {
   collection,
   getDocs,
+  getDoc,
   doc,
   deleteDoc,
   updateDoc,
@@ -20,6 +21,10 @@ export default function EditarDocumentos() {
   const [modoEdicion, setModoEdicion] = useState({});
   const [datosEditados, setDatosEditados] = useState({});
   const [titulosEditados, setTitulosEditados] = useState({});
+  const [subvinculacionesInputs, setSubvinculacionesInputs] = useState([
+    { nombre: "", documentos: "" },
+  ]);
+  const [nuevasSubvinculaciones, setNuevasSubvinculaciones] = useState({});
 
   const obtenerDatos = async () => {
     const docsRequeridosSnap = await getDocs(
@@ -55,32 +60,79 @@ export default function EditarDocumentos() {
       clave.startsWith(vinculacionId)
     );
 
+    // --- 1️⃣ Actualizar subvinculaciones existentes ---
     for (const [clave, { nombre, documentos }] of cambios) {
       const partes = clave.split("-");
-      const nombreOriginal = partes.slice(1).join("-");
+      const nombreOriginal = partes.slice(1).join("-").trim();
+      const documentosArr = documentos
+        .split(",")
+        .map((doc) => doc.trim())
+        .filter(Boolean);
 
-      // Eliminar viejo si cambió el nombre
       if (nombreOriginal !== nombre) {
+        // El nombre cambió → actualizamos en documentosRequeridos y tipos en vinculación
         await deleteDoc(doc(db, "documentosRequeridos", nombreOriginal));
-        await updateDoc(doc(db, "vinculaciones", vinculacionId), {
+        await setDoc(doc(db, "documentosRequeridos", nombre), {
+          documentos: documentosArr,
+        });
+
+        const vincRef = doc(db, "vinculaciones", vinculacionId);
+        await updateDoc(vincRef, {
           tipos: arrayRemove(nombreOriginal),
+        });
+        await updateDoc(vincRef, {
+          tipos: arrayUnion(nombre),
+        });
+      } else {
+        // El nombre no cambió → solo actualizamos documentos
+        await setDoc(doc(db, "documentosRequeridos", nombre), {
+          documentos: documentosArr,
+        });
+      }
+    }
+
+    // --- 2️⃣ Si cambió el ID de la vinculación ---
+    if (
+      titulosEditados[vinculacionId] &&
+      titulosEditados[vinculacionId] !== vinculacionId
+    ) {
+      const nuevoId = titulosEditados[vinculacionId];
+      const vincRef = doc(db, "vinculaciones", vinculacionId);
+      const vincSnap = await getDoc(vincRef);
+
+      if (vincSnap.exists()) {
+        await setDoc(doc(db, "vinculaciones", nuevoId), vincSnap.data());
+        await deleteDoc(vincRef);
+      }
+    }
+
+    // --- 3️⃣ Guardar nuevas subvinculaciones ---
+    const nuevasSubs = nuevasSubvinculaciones[vinculacionId] || [];
+    if (nuevasSubs.length > 0) {
+      const vincRef = doc(db, "vinculaciones", vinculacionId);
+
+      for (const sub of nuevasSubs) {
+        const nombre = sub.nombre.trim();
+        const documentosArr = sub.documentos
+          .split(",")
+          .map((doc) => doc.trim())
+          .filter(Boolean);
+
+        await updateDoc(vincRef, { tipos: arrayUnion(nombre) });
+        await setDoc(doc(db, "documentosRequeridos", nombre), {
+          documentos: documentosArr,
         });
       }
 
-      // Guardar nuevo documento
-      await setDoc(doc(db, "documentosRequeridos", nombre), {
-        documentos: documentos.split(",").map((doc) => doc.trim()),
-      });
-
-      await updateDoc(doc(db, "vinculaciones", vinculacionId), {
-        tipos: arrayUnion(nombre),
-      });
-
-      await updateDoc(doc(db, "vinculaciones", vinculacionId), {
-        titulo: titulosEditados[vinculacionId],
+      // Limpiar después de guardar
+      setNuevasSubvinculaciones((prev) => {
+        const copia = { ...prev };
+        delete copia[vinculacionId];
+        return copia;
       });
     }
 
+    // --- 4️⃣ Reset de estados ---
     setModoEdicion((prev) => ({ ...prev, [vinculacionId]: false }));
     setDatosEditados({});
     obtenerDatos();
@@ -142,7 +194,7 @@ export default function EditarDocumentos() {
               <div className="tarjeta-header">
                 {modoEdicion[vinc.id] ? (
                   <input
-                    value={vinc.id}
+                    value={titulosEditados[vinc.id] ?? vinc.id}
                     onChange={(e) =>
                       setTitulosEditados((prev) => ({
                         ...prev,
@@ -158,6 +210,7 @@ export default function EditarDocumentos() {
                   {!modoEdicion[vinc.id] && (
                     <>
                       <button
+                        className="btnAzul2"
                         onClick={() =>
                           setModoEdicion((prev) => ({
                             ...prev,
@@ -168,6 +221,7 @@ export default function EditarDocumentos() {
                         ✏️
                       </button>
                       <button
+                        className="btnAzul2"
                         onClick={() =>
                           eliminarVinculacionCompleta(vinc.id, vinc.tipos)
                         }
@@ -179,6 +233,7 @@ export default function EditarDocumentos() {
                 </div>
                 {modoEdicion[vinc.id] && (
                   <button
+                    className="btnAzul2"
                     onClick={() => cancelarEdicionTarjeta(vinc.id)}
                     style={{ width: "45px" }}
                   >
@@ -210,6 +265,7 @@ export default function EditarDocumentos() {
                           />
                           <div>
                             <button
+                              className="btnAzul2"
                               onClick={() =>
                                 setDatosEditados((prev) => {
                                   const nuevos = { ...prev };
@@ -230,6 +286,7 @@ export default function EditarDocumentos() {
                             {modoEdicion[vinc.id] && (
                               <div style={{ display: "flex", gap: "9px" }}>
                                 <button
+                                  className="btnAzul2"
                                   onClick={() =>
                                     setDatosEditados((prev) => ({
                                       ...prev,
@@ -243,6 +300,7 @@ export default function EditarDocumentos() {
                                   ✏️
                                 </button>
                                 <button
+                                  className="btnAzul2"
                                   onClick={() =>
                                     borrarSubvinculacion(vinc.id, tipo.nombre)
                                   }
@@ -289,11 +347,61 @@ export default function EditarDocumentos() {
                 );
               })}
 
+              {/* Lista de nuevas subvinculaciones */}
+              {(nuevasSubvinculaciones[vinc.id] || []).map((sub, subIndex) => (
+                <div key={subIndex} style={{ marginBottom: "10px" }}>
+                  <input
+                    placeholder="Subvinculación"
+                    value={sub.nombre}
+                    required
+                    onChange={(e) => {
+                      setNuevasSubvinculaciones((prev) => {
+                        const copia = { ...prev };
+                        copia[vinc.id][subIndex].nombre = e.target.value;
+                        return copia;
+                      });
+                    }}
+                    style={{fontSize:'18px', marginBottom:'10px'}}
+                  />
+                  <textarea
+                    placeholder="Documentos separados por coma"
+                    value={sub.documentos}
+                    required
+                    onChange={(e) => {
+                      setNuevasSubvinculaciones((prev) => {
+                        const copia = { ...prev };
+                        copia[vinc.id][subIndex].documentos = e.target.value;
+                        return copia;
+                      });
+                    }}
+                  />
+                </div>
+              ))}
+
+              {/* Botón para agregar nueva subvinculación */}
+              {modoEdicion[vinc.id] && (
+                <button
+                  type="button"
+                  className="btn-agregar-subvinculacion"
+                  style={{ marginBottom: "10px" }}
+                  onClick={() =>
+                    setNuevasSubvinculaciones((prev) => {
+                      const copia = { ...prev };
+                      if (!copia[vinc.id]) copia[vinc.id] = [];
+                      copia[vinc.id].push({ nombre: "", documentos: "" });
+                      return copia;
+                    })
+                  }
+                >
+                  + Agregar subvinculación
+                </button>
+              )}
+
               {modoEdicion[vinc.id] && (
                 <div style={{ marginTop: "10px" }}>
                   <button
-                    className="btnAzul"
                     onClick={() => guardarCambios(vinc.id)}
+                    style={{ width: "100%" }}
                   >
                     Guardar
                   </button>
@@ -306,25 +414,117 @@ export default function EditarDocumentos() {
         {mostrarModal && (
           <div className="modal">
             <div className="modal-contenido">
-              <h3>Nueva Vinculación</h3>
+              <h2 style={{ marginTop: 0 }}>Nueva Vinculación</h2>
+
+              {/** Estado para manejar varias subvinculaciones */}
+              {/** Debe declararse en el componente padre */}
+              {/* const [subvinculacionesInputs, setSubvinculacionesInputs] = useState([{ nombre: "", documentos: "" }]); */}
+
               <form
-                onSubmit={(e) => {
+                className="form-nueva-vinculacion"
+                onSubmit={async (e) => {
                   e.preventDefault();
-                  // lógica para guardar
-                  setMostrarModal(false);
+
+                  const vincId = e.target.vinculacion.value.trim();
+
+                  // Obtener todas las subvinculaciones y documentos desde el estado
+                  const tipos = subvinculacionesInputs
+                    .map((item) => item.nombre.trim())
+                    .filter(Boolean);
+
+                  try {
+                    // 1️⃣ Crear documento en "vinculaciones"
+                    await setDoc(doc(db, "vinculaciones", vincId), {
+                      tipos: tipos,
+                    });
+
+                    // 2️⃣ Crear un documento en "documentosRequeridos" por cada subvinculación
+                    for (const item of subvinculacionesInputs) {
+                      const documentosArr = item.documentos
+                        .split(",")
+                        .map((doc) => doc.trim())
+                        .filter((doc) => doc.length > 0);
+
+                      await setDoc(
+                        doc(db, "documentosRequeridos", item.nombre.trim()),
+                        {
+                          documentos: documentosArr,
+                        }
+                      );
+                    }
+
+                    // 3️⃣ Refrescar datos y cerrar modal
+                    obtenerDatos();
+                    setMostrarModal(false);
+                    setSubvinculacionesInputs([{ nombre: "", documentos: "" }]); // reset
+                  } catch (error) {
+                    console.error("Error al crear vinculación:", error);
+                  }
                 }}
               >
-                <input placeholder="Vinculación" required />
-                <input placeholder="Subvinculación" required />
-                <textarea
-                  placeholder="Documentos separados por coma"
+                {/* Input para la vinculación */}
+                <input
+                  name="vinculacion"
+                  placeholder="Vinculación"
                   required
+                  style={{ fontSize: "18px", color: "var(--color-primario)" }}
                 />
+
+                {/* Render dinámico de subvinculaciones */}
+                {subvinculacionesInputs.map((sub, index) => (
+                  <div key={index} className="div-subvinculacion">
+                    <input
+                      placeholder="Subvinculación"
+                      value={sub.nombre}
+                      required
+                      onChange={(e) => {
+                        const newSubs = [...subvinculacionesInputs];
+                        newSubs[index].nombre = e.target.value;
+                        setSubvinculacionesInputs(newSubs);
+                      }}
+                      style={{ marginBottom: "10px" }}
+                    />
+                    <textarea
+                      placeholder="Documentos separados por coma"
+                      value={sub.documentos}
+                      required
+                      onChange={(e) => {
+                        const newSubs = [...subvinculacionesInputs];
+                        newSubs[index].documentos = e.target.value;
+                        setSubvinculacionesInputs(newSubs);
+                      }}
+                    />
+                  </div>
+                ))}
+
+                {/* Botón para agregar más subvinculaciones */}
+                <button
+                  type="button"
+                  className="btn-agregar-subvinculacion"
+                  onClick={() =>
+                    setSubvinculacionesInputs((prev) => [
+                      ...prev,
+                      { nombre: "", documentos: "" },
+                    ])
+                  }
+                >
+                  + Agregar subvinculación
+                </button>
+
                 <div className="modal-acciones">
                   <button type="submit" className="btnAzul">
                     Guardar
                   </button>
-                  <button onClick={() => setMostrarModal(false)}>
+                  <button
+                    className="btnAzul"
+                    onClick={() => {
+                      setMostrarModal(false);
+                      setSubvinculacionesInputs([
+                        { nombre: "", documentos: "" },
+                      ]);
+                    }}
+                    type="button"
+                  >
                     Cancelar
                   </button>
                 </div>

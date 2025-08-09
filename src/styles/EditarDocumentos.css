@@ -82,9 +82,42 @@
   width: 400px;
 }
 
+.div-subvinculacion {
+  border-top: 1px solid var(--color-borde-input);
+  padding-top: 15px;
+  margin-top: 10px;
+}
+
+.form-nueva-vinculacion {
+  width: 100%;
+}
+
+.form-nueva-vinculacion input,
+.form-nueva-vinculacion textarea {
+  width: -webkit-fill-available;
+  color: var(--color-texto-principal);
+}
+
+.btn-agregar-subvinculacion {
+  text-align: start;
+  margin: 10px 0 0 0;
+  color: var(--color-primario);
+  background-color: white;
+  padding: 0;
+  width: 250px;
+  border-radius: 0;
+  cursor: pointer;
+  font-weight: 600;
+}
+
+.btn-agregar-subvinculacion:hover{
+  color: var(--color-secundario);
+  background-color: white;
+}
+
 .modal-acciones {
   margin-top: 1rem;
   display: flex;
-  justify-content: flex-end;
+  justify-content: center;
   gap: 1rem;
 }
