@@ -7,13 +7,14 @@ import { useNavigate } from "react-router-dom";
 import { useAuth } from "../components/Auth/AuthProvider";
 import { collection, query, where, onSnapshot } from "firebase/firestore";
 import { db } from "../Credenciales";
+import CerrarIcon from "../assets/x.png";
 
 const Modal = ({ children, onClose }) => {
   return (
     <div className="modal-overlay">
       <div className="modal-content">
         <button className="close-button" onClick={onClose}>
-          ×
+          <img src={CerrarIcon} alt="Cerrar" className="w-6 h-6" />
         </button>
         {children}
       </div>

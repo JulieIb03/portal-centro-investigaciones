@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import "../../styles/Default.css";
 import "../../styles/Auth.css";
 import logo from "../../assets/LogoUMNG.png";
@@ -14,7 +14,7 @@ export default function Login() {
     contrasena: "",
   });
 
-  const { user } = useAuth(); // Obtén el usuario del AuthProvider
+  const { user, loading } = useAuth(); // Obtén el usuario del AuthProvider
   const navigate = useNavigate();
   const [errorResponse, setErrorResponse] = useState("");
 
@@ -31,7 +31,6 @@ export default function Login() {
         formData.correo,
         formData.contrasena
       );
-      // Redirige después de login exitoso
       navigate("/dashboard");
     } catch (err) {
       console.error(err);
@@ -39,11 +38,15 @@ export default function Login() {
     }
   };
 
-  // Si ya está autenticado, redirige al dashboard
-  if (user) {
-    navigate("/dashboard");
-    return null;
-  }
+  // Redirigir si ya está logueado
+  useEffect(() => {
+    if (!loading && user) {
+      navigate("/dashboard");
+    }
+  }, [user, loading, navigate]);
+
+  // Mientras carga la sesión, no mostrar nada
+  if (loading) return null;
 
   return (
     <div className="auth-container">

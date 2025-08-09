@@ -45,6 +45,7 @@
 }
 
 .dropdown-menu {
+  z-index: 2000;
   position: absolute;
   top: 100%;
   right: -9px;

@@ -14,13 +14,14 @@ import {
 } from "firebase/firestore";
 import { db } from "../Credenciales";
 import { useAuth } from "../components/Auth/AuthProvider";
+import CerrarIcon from "../assets/x.png";
 
 const Modal = ({ children, onClose }) => {
   return (
     <div className="modal-overlay">
       <div className="modal-content">
         <button className="close-button" onClick={onClose}>
-          ×
+          <img src={CerrarIcon} alt="Cerrar" className="w-6 h-6" />
         </button>
         {children}
       </div>
@@ -355,7 +356,6 @@ const DetallePostulacion = () => {
           <table>
             <thead>
               <tr>
-                <th>ID</th>
                 <th>Fecha de envío</th>
                 <th>N° Revisiones</th>
                 <th>Estado</th>
@@ -416,7 +416,6 @@ const DetallePostulacion = () => {
                       }
                     }}
                   >
-                    <td>{postulacion.id}</td>
                     <td>{formatDate(postulacion.fechaCreacion)}</td>
                     <td>{revision.numeroRevision || 0}</td>
                     <td className={revision.estadoFinal?.replace(/\s/g, "-")}>

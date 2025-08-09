@@ -408,8 +408,8 @@ const RevisionDocumentos = () => {
             </div>
           ))}
           <button
-            disabled={hayPendientes}
-            className={hayPendientes ? "disabled" : ""}
+            disabled={hayPendientes || isSubmitting}
+            className={hayPendientes || isSubmitting ? "disabled" : ""}
             onClick={async () => {
               if (hayPendientes) return;
               setIsSubmitting(true);

@@ -1,5 +1,5 @@
 import { Link } from "react-router-dom";
-import React, { useState } from "react";
+import React, { useState, useRef, useEffect } from "react";
 import "../styles/Header.css";
 import logo from "../assets/LogoUMNG.png";
 import { useAuth } from "../components/Auth/AuthProvider";
@@ -7,8 +7,23 @@ import { useAuth } from "../components/Auth/AuthProvider";
 export default function Header({ children }) {
   const [showDropdown, setShowDropdown] = useState(false);
   const { user } = useAuth();
+  const menuRef = useRef(null);
 
-  const toggleDropdown = () => setShowDropdown(!showDropdown);
+  const toggleDropdown = () => setShowDropdown((prev) => !prev);
+
+  // Cierra el menú si el clic fue fuera de menuRef
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+      if (menuRef.current && !menuRef.current.contains(event.target)) {
+        setShowDropdown(false);
+      }
+    };
+
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => {
+      document.removeEventListener("mousedown", handleClickOutside);
+    };
+  }, []);
 
   return (
     <>
@@ -20,8 +35,9 @@ export default function Header({ children }) {
             </Link>
           </div>
 
-          <div className="user-menu">
+          <div className="user-menu" ref={menuRef}>
             <div className="user-info" onClick={toggleDropdown}>
+              {/* SVG usuario */}
               <svg
                 width="20"
                 height="22"
@@ -60,26 +76,21 @@ export default function Header({ children }) {
               <div className="dropdown-menu">
                 {user?.rol === "revisor" && (
                   <Link to="/EditarDocumentos" className="dropdown-item">
+                    {/* SVG lápiz */}
                     <svg
-                      id="Layer_1"
-                      data-name="Layer 1"
                       xmlns="http://www.w3.org/2000/svg"
                       viewBox="0 0 122.88 119.19"
                       fill="white"
                       height="22px"
                     >
-                      <path
-                        class="cls-1"
-                        d="M104.84,1.62,121.25,18a5.58,5.58,0,0,1,0,7.88L112.17,35l-24.3-24.3L97,1.62a5.6,5.6,0,0,1,7.88,0ZM31.26,3.43h36.3L51.12,19.87H31.26A14.75,14.75,0,0,0,20.8,24.2l0,0a14.75,14.75,0,0,0-4.33,10.46v68.07H84.5A14.78,14.78,0,0,0,95,98.43l0,0a14.78,14.78,0,0,0,4.33-10.47V75.29l16.44-16.44V87.93A31.22,31.22,0,0,1,106.59,110l0,.05a31.2,31.2,0,0,1-22,9.15h-72a12.5,12.5,0,0,1-8.83-3.67l0,0A12.51,12.51,0,0,1,0,106.65v-72a31.15,31.15,0,0,1,9.18-22l.05-.05a31.17,31.17,0,0,1,22-9.16ZM72.33,74.8,52.6,80.9c-13.85,3-13.73,6.15-11.16-6.91l6.64-23.44h0l0,0L83.27,15.31l24.3,24.3L72.35,74.83l0,0ZM52.22,54.7l16,16-13,4c-10.15,3.13-10.1,5.22-7.34-4.55l4.34-15.4Z"
-                      />
+                      <path d="M104.84,1.62,121.25,18a5.58,5.58,0,0,1,0,7.88L112.17,35l-24.3-24.3L97,1.62a5.6,5.6,0,0,1,7.88,0ZM31.26,3.43h36.3L51.12,19.87H31.26A14.75,14.75,0,0,0,20.8,24.2l0,0a14.75,14.75,0,0,0-4.33,10.46v68.07H84.5A14.78,14.78,0,0,0,95,98.43l0,0a14.78,14.78,0,0,0,4.33-10.47V75.29l16.44-16.44V87.93A31.22,31.22,0,0,1,106.59,110l0,.05a31.2,31.2,0,0,1-22,9.15h-72a12.5,12.5,0,0,1-8.83-3.67l0,0A12.51,12.51,0,0,1,0,106.65v-72a31.15,31.15,0,0,1,9.18-22l.05-.05a31.17,31.17,0,0,1,22-9.16ZM72.33,74.8,52.6,80.9c-13.85,3-13.73,6.15-11.16-6.91l6.64-23.44h0l0,0L83.27,15.31l24.3,24.3L72.35,74.83l0,0ZM52.22,54.7l16,16-13,4c-10.15,3.13-10.1,5.22-7.34-4.55l4.34-15.4Z" />
                     </svg>
-                    Editar documentos
+                    Gestionar vinculaciones
                   </Link>
                 )}
                 <Link to="/logout" className="dropdown-item">
+                  {/* SVG logout */}
                   <svg
-                    id="Layer_1"
-                    data-name="Layer 1"
                     xmlns="http://www.w3.org/2000/svg"
                     viewBox="0 0 89.6 122.88"
                     fill="white"

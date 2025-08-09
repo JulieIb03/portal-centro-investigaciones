@@ -16,58 +16,58 @@ import {
 } from "firebase/firestore";
 import { useAuth } from "./Auth/AuthProvider";
 
-// Constantes fuera del componente para evitar ciclos infinitos
-const opcionesSubvinculacion = {
-  contrato_ops: ["Asistente de Investigación", "Joven Investigador"],
-  asistente_graduado: ["Proceso Nuevo", "Proceso de Renovación"],
-  estudiantes: ["Auxiliar de Pregrado", "Auxiliar de Posgrado"],
-};
+// // Constantes fuera del componente para evitar ciclos infinitos
+// const opcionesSubvinculacion = {
+//   contrato_ops: ["Asistente de Investigación", "Joven Investigador"],
+//   asistente_graduado: ["Proceso Nuevo", "Proceso de Renovación"],
+//   estudiantes: ["Auxiliar de Pregrado", "Auxiliar de Posgrado"],
+// };
 
-const documentosRequeridos = {
-  "Asistente de Investigación": [
-    "Formato de Solicitud orden y/o Contrato",
-    "Concertación de entregables IN-IV-F-26",
-    "Formato Único de Hoja de Vida (DAFP)",
-    "Fotocopia de la cédula de ciudadanía ampliada al 150%",
-    "Fotocopia de la libreta militar (si aplica)",
-    "Fotocopia de certificados laborales",
-    "Certificados Académicos (actas de grado-diplomas)",
-    "Fotocopia de RUT actualizado",
-    "Formato de Confidencialidad de la UMNG",
-  ],
-  "Joven Investigador": [
-    "Acta de pregrado (Máximo 2 años de egreso)",
-    "Copia de la cédula ampliada al 150% (Menor de 28 años)",
-    "Certificado de participación en semilleros o proyectos",
-    "Carta de compromiso de no estar en otro proyecto",
-  ],
-  "Proceso Nuevo": [
-    "Convocatoria de vinculación",
-    "Resultados de la convocatoria",
-    "Recibo de matrícula",
-    "Carta de presentación del líder del proyecto",
-    "Certificado de notas (mínimo 3.6 o 4.0 según avance)",
-  ],
-  "Proceso de Renovación": [
-    "Recibo de matrícula",
-    "Informe semestral de actividades",
-    "Evaluación del docente-tutor",
-    "Certificado de notas (mínimo 4.0)",
-  ],
-  "Auxiliar de Pregrado": [
-    "Convocatoria de vinculación",
-    "Resultados de la convocatoria",
-    "Certificación de estudios (mínimo 70% del programa)",
-    "Carta de presentación",
-    "Fotocopia de cédula",
-  ],
-  "Auxiliar de Posgrado": [
-    "Convocatoria de vinculación",
-    "Resultados de la convocatoria",
-    "Certificación de registro académico",
-    "Carta de presentación y autodeclaración",
-  ],
-};
+// const documentosRequeridos = {
+//   "Asistente de Investigación": [
+//     "Formato de Solicitud orden y/o Contrato",
+//     "Concertación de entregables IN-IV-F-26",
+//     "Formato Único de Hoja de Vida (DAFP)",
+//     "Fotocopia de la cédula de ciudadanía ampliada al 150%",
+//     "Fotocopia de la libreta militar (si aplica)",
+//     "Fotocopia de certificados laborales",
+//     "Certificados Académicos (actas de grado-diplomas)",
+//     "Fotocopia de RUT actualizado",
+//     "Formato de Confidencialidad de la UMNG",
+//   ],
+//   "Joven Investigador": [
+//     "Acta de pregrado (Máximo 2 años de egreso)",
+//     "Copia de la cédula ampliada al 150% (Menor de 28 años)",
+//     "Certificado de participación en semilleros o proyectos",
+//     "Carta de compromiso de no estar en otro proyecto",
+//   ],
+//   "Proceso Nuevo": [
+//     "Convocatoria de vinculación",
+//     "Resultados de la convocatoria",
+//     "Recibo de matrícula",
+//     "Carta de presentación del líder del proyecto",
+//     "Certificado de notas (mínimo 3.6 o 4.0 según avance)",
+//   ],
+//   "Proceso de Renovación": [
+//     "Recibo de matrícula",
+//     "Informe semestral de actividades",
+//     "Evaluación del docente-tutor",
+//     "Certificado de notas (mínimo 4.0)",
+//   ],
+//   "Auxiliar de Pregrado": [
+//     "Convocatoria de vinculación",
+//     "Resultados de la convocatoria",
+//     "Certificación de estudios (mínimo 70% del programa)",
+//     "Carta de presentación",
+//     "Fotocopia de cédula",
+//   ],
+//   "Auxiliar de Posgrado": [
+//     "Convocatoria de vinculación",
+//     "Resultados de la convocatoria",
+//     "Certificación de registro académico",
+//     "Carta de presentación y autodeclaración",
+//   ],
+// };
 
 const SubidaDocumentos = ({
   postulacionId: postulacionId = "",
@@ -83,6 +83,9 @@ const SubidaDocumentos = ({
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
   const [ultimaRevision, setUltimaRevision] = useState(null);
+
+  const [opcionesSubvinculacion, setOpcionesSubvinculacion] = useState({});
+  const [documentosRequeridos, setDocumentosRequeridos] = useState({});
 
   const esReenvio = !!postulacionId;
 
@@ -101,6 +104,37 @@ const SubidaDocumentos = ({
 
   const [subvinculaciones, setSubvinculaciones] = useState([]);
   const [documentos, setDocumentos] = useState([]);
+
+  //Obtener las vinculaciones con sus subvinculaciones
+  useEffect(() => {
+    const fetchData = async () => {
+      try {
+        // Obtener vinculaciones
+        const vinculacionesSnapshot = await getDocs(
+          collection(db, "vinculaciones")
+        );
+        const vinculacionesData = {};
+        vinculacionesSnapshot.forEach((doc) => {
+          vinculacionesData[doc.id] = doc.data().tipos || [];
+        });
+        setOpcionesSubvinculacion(vinculacionesData);
+
+        // Obtener documentos requeridos
+        const documentosSnapshot = await getDocs(
+          collection(db, "documentosRequeridos")
+        );
+        const documentosData = {};
+        documentosSnapshot.forEach((doc) => {
+          documentosData[doc.id] = doc.data().documentos || [];
+        });
+        setDocumentosRequeridos(documentosData);
+      } catch (error) {
+        console.error("Error cargando datos:", error);
+      }
+    };
+
+    fetchData();
+  }, []);
 
   // Obtener la última revisión cuando es reenvío
   useEffect(() => {
@@ -180,11 +214,12 @@ const SubidaDocumentos = ({
 
   useEffect(() => {
     if (formData.subvinculacion) {
+      // documentosRequeridos viene del snapshot de Firestore
       setDocumentos(documentosRequeridos[formData.subvinculacion] || []);
     } else {
       setDocumentos([]);
     }
-  }, [formData.subvinculacion]);
+  }, [formData.subvinculacion, documentosRequeridos]);
 
   const documentoEstaAprobado = (nombreDocumento) => {
     return ultimaRevision?.comentarios?.[nombreDocumento] === "Aprobado";
@@ -486,9 +521,11 @@ const SubidaDocumentos = ({
           disabled={esReenvio}
         >
           <option value="">Seleccione</option>
-          <option value="contrato_ops">Contrato OPS</option>
-          <option value="asistente_graduado">Asistente Graduado</option>
-          <option value="estudiantes">Estudiantes</option>
+          {Object.keys(opcionesSubvinculacion).map((id) => (
+            <option key={id} value={id}>
+              {id}
+            </option>
+          ))}
         </select>
 
         <label htmlFor="subvinculacion">Subcategoría:</label>
@@ -501,8 +538,8 @@ const SubidaDocumentos = ({
           disabled={esReenvio || !formData.tipoVinculacion}
         >
           <option value="">Seleccione</option>
-          {subvinculaciones.map((sub, i) => (
-            <option key={i} value={sub}>
+          {subvinculaciones.map((sub) => (
+            <option key={sub} value={sub}>
               {sub}
             </option>
           ))}
