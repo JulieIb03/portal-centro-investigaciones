@@ -8,7 +8,7 @@ const router = express.Router();
 const upload = multer({ dest: "uploads/" });
 
 const KEYFILEPATH = path.join(__dirname, "credentials-drive.json");
-const SHARED_DRIVE_ID = "0AD_tUUQq3wbHUk9PVA"; // ID del Shared Drive
+const SHARED_DRIVE_ID = "0AC4W4jQjr_7tUk9PVA"; // ID del Shared Drive
 
 const auth = new google.auth.GoogleAuth({
   keyFile: KEYFILEPATH,
