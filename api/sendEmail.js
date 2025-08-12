@@ -1,20 +1,11 @@
-const express = require("express");
-const nodemailer = require("nodemailer");
-const fs = require("fs");
-const path = require("path");
-require("dotenv").config();
+// /api/sendEmail.js
+import nodemailer from "nodemailer";
 
-const router = express.Router();
+export default async function handler(req, res) {
+  if (req.method !== "POST") {
+    return res.status(405).json({ error: "Método no permitido" });
+  }
 
-const transporter = nodemailer.createTransport({
-  service: "gmail",
-  auth: {
-    user: process.env.EMAIL_USER,
-    pass: process.env.EMAIL_PASS,
-  },
-});
-
-router.post("/", async (req, res) => {
   const { to, subject, template, variables } = req.body;
 
   if (!to || !subject || !template || !variables) {
@@ -23,9 +14,9 @@ router.post("/", async (req, res) => {
       .json({ error: "Faltan datos en el cuerpo de la solicitud." });
   }
 
-  try {
-    const templates = {
-      plantillaNuevaPostulacion: `<body
+  // Plantillas disponibles
+  const templates = {
+    plantillaNuevaPostulacion: `<body
         style="
           font-family: Montserrat, sans-serif;
           margin: 0;
@@ -110,7 +101,7 @@ router.post("/", async (req, res) => {
         ></div>
       </body>
       `,
-      plantillaReenvio: `<body
+    plantillaReenvio: `<body
         style="
           font-family: Montserrat, sans-serif;
           margin: 0;
@@ -199,7 +190,7 @@ router.post("/", async (req, res) => {
         ></div>
       </body>
       `,
-      plantillaRevision: `<body
+    plantillaRevision: `<body
         style="
           font-family: Montserrat, sans-serif;
           margin: 0;
@@ -290,14 +281,25 @@ router.post("/", async (req, res) => {
         ></div>
       </body>
       `,
-    };
+  };
 
-    if (!templates[template]) {
-      return res
-        .status(404)
-        .json({ error: `La plantilla '${template}' no existe.` });
-    }
+  if (!templates[template]) {
+    return res
+      .status(404)
+      .json({ error: `La plantilla '${template}' no existe.` });
+  }
 
+  try {
+    // Crear transporte SMTP
+    const transporter = nodemailer.createTransport({
+      service: "gmail",
+      auth: {
+        user: process.env.EMAIL_USER,
+        pass: process.env.EMAIL_PASS,
+      },
+    });
+
+    // Procesar plantilla
     let htmlContent = templates[template];
 
     if (variables.ESTADO === "En corrección") {
@@ -325,6 +327,7 @@ router.post("/", async (req, res) => {
       htmlContent = htmlContent.replace(placeholder, value);
     });
 
+    // Enviar correo
     await transporter.sendMail({
       from: `"Centro de Investigaciones" <${process.env.EMAIL_USER}>`,
       to,
@@ -339,6 +342,4 @@ router.post("/", async (req, res) => {
       .status(500)
       .json({ error: "Error interno al enviar el correo." });
   }
-});
-
-module.exports = router;
+}

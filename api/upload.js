@@ -1,13 +1,18 @@
-const express = require("express");
+// const express = require("express");
 const multer = require("multer");
-const fs = require("fs");
-const path = require("path");
+// const fs = require("fs");
+// const path = require("path");
 const { google } = require("googleapis");
 const { Readable } = require("stream");
-const stream = Readable.from(file.buffer);
 
-const router = express.Router();
+// const router = express.Router();
 const upload = multer({ storage: multer.memoryStorage() });
+
+export const config = {
+  api: {
+    bodyParser: false, // Necesario para multer
+  },
+};
 
 const SHARED_DRIVE_ID = "0AC4W4jQjr_7tUk9PVA"; // ID del Shared Drive
 
@@ -20,183 +25,108 @@ const auth = new google.auth.GoogleAuth({
 
 // Función para buscar o crear una carpeta
 async function findOrCreateFolder(driveService, parentId, folderName) {
-  try {
-    const safeName = folderName.replace(/'/g, "\\'");
+  const safeName = folderName.replace(/'/g, "\\'");
+  const response = await driveService.files.list({
+    q: `name='${safeName}' and '${parentId}' in parents and mimeType='application/vnd.google-apps.folder' and trashed=false`,
+    fields: "files(id, name)",
+    supportsAllDrives: true,
+    includeItemsFromAllDrives: true,
+    corpora: "drive",
+    driveId: SHARED_DRIVE_ID,
+  });
 
-    console.log(`🔍 Buscando carpeta '${folderName}' dentro de ${parentId}`);
+  if (response.data.files.length > 0) {
+    return response.data.files[0].id;
+  }
 
-    const response = await driveService.files.list({
-      q: `name='${safeName}' and '${parentId}' in parents and mimeType='application/vnd.google-apps.folder' and trashed=false`,
-      fields: "files(id, name)",
-      supportsAllDrives: true,
-      includeItemsFromAllDrives: true,
-      corpora: "drive",
-      driveId: SHARED_DRIVE_ID,
-    });
-
-    if (response.data.files.length > 0) {
-      console.log(
-        `✅ Carpeta encontrada: '${folderName}' → ${response.data.files[0].id}`
-      );
-      return response.data.files[0].id;
-    }
-
-    console.log(
-      `📁 Carpeta no encontrada, creando '${folderName}' dentro de ${parentId}`
-    );
-
-    const folderMetadata = {
+  const folder = await driveService.files.create({
+    resource: {
       name: folderName,
       mimeType: "application/vnd.google-apps.folder",
       parents: [parentId],
-    };
+    },
+    fields: "id",
+    supportsAllDrives: true,
+  });
 
-    const folder = await driveService.files.create({
-      resource: folderMetadata,
-      fields: "id",
-      supportsAllDrives: true,
-    });
-
-    console.log(`✅ Carpeta creada: '${folderName}' → ${folder.data.id}`);
-
-    return folder.data.id;
-  } catch (error) {
-    console.error(`❌ Error al buscar/crear carpeta '${folderName}':`, error);
-    throw error;
-  }
+  return folder.data.id;
 }
 
-router.post("/", upload.single("file"), async (req, res) => {
-  const file = req.file;
-  const { codigoProyecto, usuarioEmail, nombrePostulante } = req.body;
-
-  if (!codigoProyecto || !usuarioEmail || !nombrePostulante) {
-    return res.status(400).json({
-      success: false,
-      error:
-        "Faltan datos necesarios (codigoProyecto, usuarioEmail, nombrePostulante)",
+function runMiddleware(req, res, fn) {
+  return new Promise((resolve, reject) => {
+    fn(req, res, (result) => {
+      if (result instanceof Error) return reject(result);
+      return resolve(result);
     });
-  }
+  });
+}
 
+export default async function handler(req, res) {
   try {
+    await runMiddleware(req, res, upload.single("file"));
+
+    const file = req.file;
+    const { codigoProyecto, usuarioEmail, nombrePostulante } = req.body;
+
+    if (!file || !codigoProyecto || !usuarioEmail || !nombrePostulante) {
+      return res.status(400).json({
+        success: false,
+        error: "Faltan datos o archivo",
+      });
+    }
+
     const driveService = google.drive({
       version: "v3",
       auth: await auth.getClient(),
     });
 
-    console.log("🚀 Iniciando subida a Drive...");
-    console.log("📦 Datos recibidos:", {
-      archivo: file.originalname,
-      codigoProyecto,
-      usuarioEmail,
-      nombrePostulante,
-    });
-
-    // 1. Carpeta del proyecto
     const proyectoFolderId = await findOrCreateFolder(
       driveService,
       SHARED_DRIVE_ID,
       codigoProyecto
     );
-
-    // 2. Carpeta del usuario
     const usuarioFolderId = await findOrCreateFolder(
       driveService,
       proyectoFolderId,
       usuarioEmail
     );
-
-    // 3. Carpeta del postulante
     const postulanteFolderId = await findOrCreateFolder(
       driveService,
       usuarioFolderId,
       nombrePostulante
     );
 
-    // 4. Subir archivo
-    console.log("📤 Subiendo archivo a carpeta:", postulanteFolderId);
+    const stream = Readable.from(file.buffer);
 
-    let fileResponse;
-    try {
-      fileResponse = await driveService.files.create({
-        resource: {
-          name: file.originalname,
-          parents: [postulanteFolderId],
-        },
-        media: {
-          mimeType: file.mimetype,
-          body: stream,
-        },
-        fields: "id, webViewLink",
-        supportsAllDrives: true,
-      });
+    const fileResponse = await driveService.files.create({
+      resource: {
+        name: file.originalname,
+        parents: [postulanteFolderId],
+      },
+      media: {
+        mimeType: file.mimetype,
+        body: stream,
+      },
+      fields: "id, webViewLink",
+      supportsAllDrives: true,
+    });
 
-      console.log("✅ Archivo subido con éxito:", fileResponse.data);
-    } catch (uploadError) {
-      console.error("❌ Error al subir archivo:", uploadError);
-      return res.status(500).json({
-        success: false,
-        error: "Error al subir archivo a Google Drive",
-        details: uploadError.message,
-      });
-    }
-
-    try {
-      await driveService.permissions.create({
-        fileId: fileResponse.data.id,
-        requestBody: {
-          role: "reader",
-          type: "anyone",
-        },
-        supportsAllDrives: true,
-      });
-
-      console.log("🔓 Permiso público creado para el archivo.");
-    } catch (permError) {
-      console.error(
-        "⚠️ Archivo subido pero falló al asignar permiso público:",
-        permError
-      );
-      return res.status(200).json({
-        success: true,
-        warning: "Archivo subido pero falló al asignar permiso público",
-        fileId: fileResponse.data.id,
-        viewLink: fileResponse.data.webViewLink,
-        embedLink: `https://drive.google.com/file/d/${fileResponse.data.id}/preview`,
-      });
-    }
+    await driveService.permissions.create({
+      fileId: fileResponse.data.id,
+      requestBody: { role: "reader", type: "anyone" },
+      supportsAllDrives: true,
+    });
 
     const embedLink = `https://drive.google.com/file/d/${fileResponse.data.id}/preview`;
-
-    console.log("✅ Archivo subido con éxito:", {
-      id: fileResponse.data.id,
-      webViewLink: fileResponse.data.webViewLink,
-      embedLink,
-    });
 
     return res.json({
       success: true,
       fileId: fileResponse.data.id,
       viewLink: fileResponse.data.webViewLink,
       embedLink,
-      folderStructure: {
-        proyecto: codigoProyecto,
-        usuario: usuarioEmail,
-        postulante: nombrePostulante,
-      },
     });
   } catch (error) {
-    console.error("❌ Error completo:", {
-      message: error.message,
-      code: error.code,
-      errors: error.errors,
-    });
-    return res.status(500).json({
-      success: false,
-      error: "Error al subir a Google Drive",
-      details: error.message,
-    });
+    console.error("Error al subir:", error);
+    return res.status(500).json({ success: false, error: error.message });
   }
-});
-
-module.exports = router;
+}

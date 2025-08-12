@@ -356,7 +356,7 @@ const SubidaDocumentos = ({
             } else {
               const revisor = revisorDoc.data();
 
-              const res = await fetch("/api/send-email", {
+              const res = await fetch("/api/sendEmail", {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify({
@@ -442,7 +442,7 @@ const SubidaDocumentos = ({
           await Promise.all(
             revisores.map(async (revisor) => {
               try {
-                const res = await fetch("/api/send-email", {
+                const res = await fetch("/api/sendEmail", {
                   method: "POST",
                   headers: { "Content-Type": "application/json" },
                   body: JSON.stringify({

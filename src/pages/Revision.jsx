@@ -486,7 +486,7 @@ const RevisionDocumentos = () => {
 
                 console.log("📤 4. Enviando correo...");
 
-                const res = await fetch("/api/send-email", {
+                const res = await fetch("/api/sendEmail", {
                   method: "POST",
                   headers: { "Content-Type": "application/json" },
                   body: JSON.stringify({
