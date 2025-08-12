@@ -255,7 +255,7 @@ const SubidaDocumentos = ({
     formDataArchivo.append("nombrePostulante", formData.nombrePostulante);
 
     try {
-      const response = await fetch("http://localhost:5000/upload", {
+      const response = await fetch("/api/upload", {
         method: "POST",
         body: formDataArchivo,
       });
@@ -356,7 +356,7 @@ const SubidaDocumentos = ({
             } else {
               const revisor = revisorDoc.data();
 
-              const res = await fetch("http://localhost:5000/send-email", {
+              const res = await fetch("/api/send-email", {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify({
@@ -442,7 +442,7 @@ const SubidaDocumentos = ({
           await Promise.all(
             revisores.map(async (revisor) => {
               try {
-                const res = await fetch("http://localhost:5000/send-email", {
+                const res = await fetch("/api/send-email", {
                   method: "POST",
                   headers: { "Content-Type": "application/json" },
                   body: JSON.stringify({

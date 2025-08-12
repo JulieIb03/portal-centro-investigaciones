@@ -3,9 +3,11 @@ const multer = require("multer");
 const fs = require("fs");
 const path = require("path");
 const { google } = require("googleapis");
+const { Readable } = require("stream");
+const stream = Readable.from(file.buffer);
 
 const router = express.Router();
-const upload = multer({ dest: "uploads/" });
+const upload = multer({ storage: multer.memoryStorage() });
 
 const KEYFILEPATH = path.join(__dirname, "credentials-drive.json");
 const SHARED_DRIVE_ID = "0AC4W4jQjr_7tUk9PVA"; // ID del Shared Drive
@@ -122,7 +124,7 @@ router.post("/", upload.single("file"), async (req, res) => {
         },
         media: {
           mimeType: file.mimetype,
-          body: fs.createReadStream(file.path),
+          body: stream,
         },
         fields: "id, webViewLink",
         supportsAllDrives: true,
@@ -162,9 +164,6 @@ router.post("/", upload.single("file"), async (req, res) => {
         embedLink: `https://drive.google.com/file/d/${fileResponse.data.id}/preview`,
       });
     }
-
-    // 6. Eliminar archivo temporal
-    fs.unlinkSync(file.path);
 
     const embedLink = `https://drive.google.com/file/d/${fileResponse.data.id}/preview`;
 
