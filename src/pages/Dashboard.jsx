@@ -121,8 +121,28 @@ const Dashboard = () => {
   // Helper para mostrar fecha
   const formatDate = (fecha) => {
     if (!fecha) return "-";
-    const dateObj = fecha.toDate ? fecha.toDate() : fecha;
-    return dateObj.toLocaleDateString("es-CO");
+
+    let dateObj;
+
+    if (fecha.toDate) {
+      // Timestamp de Firestore
+      dateObj = fecha.toDate();
+    } else if (typeof fecha === "string") {
+      // String ISO -> convertir a Date
+      dateObj = new Date(fecha);
+    } else {
+      // Ya es Date
+      dateObj = fecha;
+    }
+
+    // Validar fecha válida
+    if (isNaN(dateObj.getTime())) return "-";
+
+    return dateObj.toLocaleDateString("es-CO", {
+      day: "2-digit",
+      month: "2-digit",
+      year: "numeric",
+    });
   };
 
   return (
