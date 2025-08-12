@@ -5,7 +5,14 @@ import "../styles/Dashboard.css";
 import SubidaDocumentos from "../components/Subida";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "../components/Auth/AuthProvider";
-import { collection, query, where, onSnapshot } from "firebase/firestore";
+import {
+  collection,
+  query,
+  where,
+  onSnapshot,
+  doc,
+  getDoc,
+} from "firebase/firestore";
 import { db } from "../Credenciales";
 import CerrarIcon from "../assets/x.png";
 
@@ -25,7 +32,6 @@ const Modal = ({ children, onClose }) => {
 const Dashboard = () => {
   const [open, setOpen] = useState(false);
   const navigate = useNavigate();
-
   const { user } = useAuth();
   const [postulaciones, setPostulaciones] = useState([]);
   const [conteos, setConteos] = useState({
@@ -39,7 +45,6 @@ const Dashboard = () => {
   useEffect(() => {
     if (!user) return;
 
-    // Consulta para las postulaciones del usuario (docente) o todas (revisor)
     const q =
       user.rol === "docente"
         ? query(
@@ -48,7 +53,7 @@ const Dashboard = () => {
           )
         : query(collection(db, "postulaciones"));
 
-    const unsubscribe = onSnapshot(q, (querySnapshot) => {
+    const unsubscribe = onSnapshot(q, async (querySnapshot) => {
       const posts = [];
       const nuevosConteos = {
         Pendiente: 0,
@@ -56,14 +61,29 @@ const Dashboard = () => {
         Aprobado: 0,
       };
 
-      querySnapshot.forEach((doc) => {
-        const data = doc.data();
-        posts.push({ id: doc.id, ...data });
+      for (const docSnap of querySnapshot.docs) {
+        const data = docSnap.data();
+
+        // Obtenemos última revisión si existen IDs
+        let ultimaRevisionFecha = null;
+        if (data.revisionIds && data.revisionIds.length > 0) {
+          const lastRevisionId = data.revisionIds[data.revisionIds.length - 1];
+          const revDoc = await getDoc(doc(db, "revisiones", lastRevisionId));
+          if (revDoc.exists()) {
+            ultimaRevisionFecha = revDoc.data().fechaRevision || null;
+          }
+        }
+
+        posts.push({
+          id: docSnap.id,
+          ...data,
+          ultimaRevisionFecha,
+        });
 
         if (data.estado in nuevosConteos) {
           nuevosConteos[data.estado]++;
         }
-      });
+      }
 
       setPostulaciones(posts);
       setConteos(nuevosConteos);
@@ -94,9 +114,16 @@ const Dashboard = () => {
     return filtradas.sort((a, b) => {
       const fechaA = a.fechaActualizacion?.toDate?.() || new Date(0);
       const fechaB = b.fechaActualizacion?.toDate?.() || new Date(0);
-      return fechaB - fechaA; // Más recientes primero
+      return fechaB - fechaA;
     });
   })();
+
+  // Helper para mostrar fecha
+  const formatDate = (fecha) => {
+    if (!fecha) return "-";
+    const dateObj = fecha.toDate ? fecha.toDate() : fecha;
+    return dateObj.toLocaleDateString("es-CO");
+  };
 
   return (
     <Header>
@@ -112,7 +139,7 @@ const Dashboard = () => {
                   : "pendiente"
               } ${filtroEstado === key ? "activa" : ""}`}
               key={key}
-              onClick={() => setFiltroEstado(filtroEstado === key ? null : key)} // Toggle
+              onClick={() => setFiltroEstado(filtroEstado === key ? null : key)}
             >
               <div className="card-value">{value}</div>
               <div className="card-label">{key}</div>
@@ -138,7 +165,6 @@ const Dashboard = () => {
                 </button>
               )}
 
-              {/* "Nueva postulación" solo para docentes */}
               {user?.rol === "docente" && (
                 <button className="btnAzul" onClick={() => setOpen(true)}>
                   Nueva postulación
@@ -147,7 +173,6 @@ const Dashboard = () => {
             </div>
           </div>
 
-          {/* Muestra el modal solo si el rol es docente */}
           {user?.rol === "docente" && open && (
             <Modal onClose={() => setOpen(false)}>
               <SubidaDocumentos onClose={() => setOpen(false)} />
@@ -158,10 +183,12 @@ const Dashboard = () => {
             <thead>
               <tr>
                 <th>Código del Proyecto</th>
+                <th>Fecha de envío</th>
                 <th>Nombre Postulante</th>
                 <th>Tipo de Vinculación</th>
                 <th>Tipo de Contrato</th>
                 <th>Revisiones</th>
+                <th>Última revisión</th>
                 <th>Estado</th>
               </tr>
             </thead>
@@ -169,16 +196,18 @@ const Dashboard = () => {
               {postulacionesFiltradas.map((p, i) => (
                 <tr
                   key={i}
-                  onClick={() => navigate(`/detalle/${p.id}`)} // Usa p.id en lugar de p.codigo
+                  onClick={() => navigate(`/detalle/${p.id}`)}
                   className="clickable-row"
                 >
                   <td>{p.codigoProyecto}</td>
+                  <td>{formatDate(p.fechaActualizacion)}</td>
                   <td>{p.nombrePostulante}</td>
                   <td>
                     {tiposVinculacion[p.tipoVinculacion] || p.tipoVinculacion}
                   </td>
                   <td>{p.subvinculacion}</td>
                   <td>{p.revisiones}</td>
+                  <td>{formatDate(p.ultimaRevisionFecha)}</td>
                   <td>
                     <p className={`estado ${p.estado.replace(" ", "-")}`}>
                       {p.estado}
