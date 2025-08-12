@@ -9,11 +9,12 @@ const stream = Readable.from(file.buffer);
 const router = express.Router();
 const upload = multer({ storage: multer.memoryStorage() });
 
-const KEYFILEPATH = path.join(__dirname, "credentials-drive.json");
 const SHARED_DRIVE_ID = "0AC4W4jQjr_7tUk9PVA"; // ID del Shared Drive
 
+const credentials = JSON.parse(process.env.GOOGLE_CREDENTIALS);
+
 const auth = new google.auth.GoogleAuth({
-  keyFile: KEYFILEPATH,
+  credentials,
   scopes: ["https://www.googleapis.com/auth/drive"],
 });
 
