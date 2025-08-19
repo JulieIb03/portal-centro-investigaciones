@@ -1,4 +1,4 @@
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import React, { useState, useRef, useEffect } from "react";
 import "../styles/Header.css";
 import logo from "../assets/LogoUMNG.png";
@@ -8,6 +8,7 @@ export default function Header({ children }) {
   const [showDropdown, setShowDropdown] = useState(false);
   const { user } = useAuth();
   const menuRef = useRef(null);
+  const navigate = useNavigate();
 
   const toggleDropdown = () => setShowDropdown((prev) => !prev);
 
@@ -29,6 +30,28 @@ export default function Header({ children }) {
     <>
       <header className="main-header">
         <nav className="header-nav">
+          {/* Botón de volver atrás */}
+          <button
+            className="back-button"
+            onClick={() => navigate(-1)} // <- va hacia atrás en el historial
+          >
+            {/* Flecha izquierda SVG */}
+            <svg
+              width="30"
+              height="30"
+              viewBox="0 0 24 24"
+              fill="none"
+              xmlns="http://www.w3.org/2000/svg"
+            >
+              <path
+                d="M15 12H5M5 12L10 7M5 12L10 17"
+                stroke="white"
+                strokeWidth="2"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              />
+            </svg>
+          </button>
           <div className="logo-container">
             <Link to="/Dashboard">
               <img src={logo} alt="Logo UMNG" className="header-logo" />

@@ -72,3 +72,17 @@
 .dropdown-item:hover {
   text-decoration: underline;
 }
+
+.back-logo-container {
+  display: flex;
+  align-items: center;
+}
+
+.back-button {
+  background: none;
+  border: none;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  padding: 0;
+}
