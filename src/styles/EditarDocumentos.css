@@ -110,7 +110,7 @@
   font-weight: 600;
 }
 
-.btn-agregar-subvinculacion:hover{
+.btn-agregar-subvinculacion:hover {
   color: var(--color-secundario);
   background-color: white;
 }
@@ -120,4 +120,11 @@
   display: flex;
   justify-content: center;
   gap: 1rem;
+}
+
+.error-message {
+  color: var(--color-pendiente);
+  margin: 5px 0 0 0;
+  font-size: 14px;
+  font-style: italic;
 }

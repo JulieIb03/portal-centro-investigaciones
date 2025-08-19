@@ -131,7 +131,10 @@ const RevisionDocumentos = () => {
 
             Object.keys(data.documentos || {}).forEach((key) => {
               const comentario = ultimaRev.comentarios?.[key] || "";
-              nuevosComentarios[key] = comentario;
+              nuevosComentarios[key] =
+                comentario && comentario !== "Aprobado"
+                  ? `Comentario anterior: ${comentario}`
+                  : comentario; // deja "Aprobado" tal cual
               nuevosRevisados[key] = comentario === "Aprobado";
               nuevosBloqueados[key] = comentario === "Aprobado";
             });
@@ -181,14 +184,6 @@ const RevisionDocumentos = () => {
   const documentos = postulacion.documentos || {};
   const documentoActual = documentos[selectedDocKey] || {};
 
-  console.log("Estado actual:", {
-    selectedDocKey,
-    documentoActual,
-    comentarios,
-    documentosRevisados,
-    bloqueados,
-  });
-
   // Formateo útil para campos como tipoVinculacion
   const formatVinculacion = (texto) => {
     if (!texto) return "";
@@ -223,16 +218,12 @@ const RevisionDocumentos = () => {
     <Header>
       {!mostrarResumen && (
         <div className="revision-grid">
-          {/* Selector de documentos */}
-          <div className="visor">
-            <select
-              value={selectedDocKey}
-              onChange={(e) => setSelectedDocKey(e.target.value)}
-              className="dropdown-selector"
-            >
+          {/* Sidebar de documentos */}
+          <div className="sidebar-documentos">
+            <h3>Documentos</h3>
+            <ul>
               {Object.keys(documentos || {})
                 .sort((a, b) => {
-                  // Solo ordenar si hay una revisión previa
                   if (ultimaRevision) {
                     const aAprobado = documentosRevisados[a] || false;
                     const bAprobado = documentosRevisados[b] || false;
@@ -242,12 +233,21 @@ const RevisionDocumentos = () => {
                   return 0;
                 })
                 .map((key) => (
-                  <option key={key} value={key}>
-                    {key} {documentosRevisados[key] ? " ✓" : ""}
-                  </option>
+                  <li
+                    key={key}
+                    className={`doc-item ${
+                      selectedDocKey === key ? "activo" : ""
+                    }`}
+                    onClick={() => setSelectedDocKey(key)}
+                  >
+                    {key} {documentosRevisados[key] ? "✓" : ""}
+                  </li>
                 ))}
-            </select>
+            </ul>
+          </div>
 
+          {/* Selector de documentos */}
+          <div className="visor">
             {/* Visualización PDF */}
             {selectedDocKey && documentos[selectedDocKey]?.url && (
               <iframe
@@ -330,8 +330,6 @@ const RevisionDocumentos = () => {
                 value={
                   bloqueados[selectedDocKey]
                     ? "Aprobado"
-                    : ultimaRevision && !documentosRevisados[selectedDocKey]
-                    ? ""
                     : comentarios[selectedDocKey] || ""
                 }
                 onChange={handleComentarioChange}
@@ -349,13 +347,22 @@ const RevisionDocumentos = () => {
                   type="checkbox"
                   checked={!!documentosRevisados[selectedDocKey]}
                   onChange={() => toggleDocumentoRevisado(selectedDocKey)}
-                  disabled={bloqueados[selectedDocKey]}
+                  disabled={
+                    bloqueados[selectedDocKey] ||
+                    (!comentariosPrevios[selectedDocKey] &&
+                      comentarios[selectedDocKey] &&
+                      comentarios[selectedDocKey].trim() !== "")
+                  }
                   style={{
                     accentColor: "#0b3c4d",
                     marginRight: "0.5em",
-                    cursor: bloqueados[selectedDocKey]
-                      ? "not-allowed"
-                      : "pointer",
+                    cursor:
+                      bloqueados[selectedDocKey] ||
+                      (!comentariosPrevios[selectedDocKey] &&
+                        comentarios[selectedDocKey] &&
+                        comentarios[selectedDocKey].trim() !== "")
+                        ? "not-allowed"
+                        : "pointer",
                   }}
                 />
                 Aprobar Documento
@@ -364,7 +371,6 @@ const RevisionDocumentos = () => {
 
             <button
               onClick={() => {
-                console.log("Mostrando resumen de revisión");
                 setMostrarResumen(true);
               }}
               style={{ width: "100%" }}
@@ -396,7 +402,6 @@ const RevisionDocumentos = () => {
               {!bloqueados[key] && (
                 <button
                   onClick={() => {
-                    console.log("Editando documento:", key);
                     setSelectedDocKey(key);
                     setMostrarResumen(false);
                   }}
@@ -450,7 +455,6 @@ const RevisionDocumentos = () => {
                   fechaRevision: new Date().toISOString(),
                 };
 
-                console.log("📌 1. Creando revisión...");
                 const nuevaDocRef = await addDoc(
                   collection(db, "revisiones"),
                   nuevaRevision
@@ -458,16 +462,13 @@ const RevisionDocumentos = () => {
                 const revisionId = nuevaDocRef.id;
                 console.log("✅ Revisión guardada con ID:", revisionId);
 
-                console.log("📌 2. Actualizando postulación...");
                 const postulacionRef = doc(db, "postulaciones", id);
                 await updateDoc(postulacionRef, {
                   revisiones: numeroRevision,
                   estado: nuevoEstado,
                   revisionIds: arrayUnion(revisionId),
                 });
-                console.log("✅ Postulación actualizada");
 
-                console.log("📌 3. Obteniendo datos del docente...");
                 const usuarioDoc = await getDoc(
                   doc(db, "usuarios", postulacion.usuarioId)
                 );
@@ -480,11 +481,6 @@ const RevisionDocumentos = () => {
 
                 if (!correoDocente)
                   throw new Error("No se encontró correo del docente");
-
-                console.log("📧 Correo del docente:", correoDocente);
-                console.log("👤 Nombre del docente:", nombreDocente);
-
-                console.log("📤 4. Enviando correo...");
 
                 const res = await fetch("/api/sendEmail", {
                   method: "POST",

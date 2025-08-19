@@ -2,10 +2,47 @@
 
 .revision-grid {
   display: grid;
-  grid-template-columns: 1fr 300px;
+  grid-template-columns: 220px 1fr 320px;
   gap: 1.5rem;
   padding: 2rem;
   padding-bottom: 0;
+}
+
+.sidebar-documentos {
+  background-color: #f9f9f9;
+  padding: 20px;
+  border-radius: 8px;
+  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+  overflow-y: auto;
+}
+
+.sidebar-documentos h3 {
+  margin-top: 0;
+  margin-bottom: 20px;
+}
+
+.sidebar-documentos ul {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+
+.sidebar-documentos .doc-item {
+  padding: 8px 10px;
+  margin-bottom: 5px;
+  cursor: pointer;
+  border-radius: 6px;
+  transition: background 0.2s;
+}
+
+.sidebar-documentos .doc-item:hover {
+  background: #eaeaea;
+}
+
+.sidebar-documentos .doc-item.activo {
+  background: #0b3c4d;
+  color: #fff;
+  font-weight: bold;
 }
 
 .visor {
@@ -15,7 +52,7 @@
   justify-content: space-between;
 }
 
-.dropdown-selector {
+/* .dropdown-selector {
   width: 100%;
   padding: 0.5rem;
   font-weight: 600;
@@ -31,7 +68,6 @@
   cursor: pointer;
   box-shadow: rgba(50, 50, 93, 0.25) 0px 13px 27px -5px,
     rgba(0, 0, 0, 0.3) 0px 8px 16px -8px;
-  /* Flecha contorno personalizada */
   appearance: none;
   -webkit-appearance: none;
   -moz-appearance: none;
@@ -44,8 +80,8 @@
 
 .dropdown-selector:focus {
   outline: none;
-  border: 2px solid var(--color-secundario, #f5af00); /* o el color que uses */
-}
+  border: 2px solid var(--color-secundario, #f5af00);
+} */
 
 .documento {
   width: 100%;
@@ -91,9 +127,15 @@
   font-weight: bold;
 }
 
+.revision-box {
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+}
+
 .revision-box textarea {
   width: 90%;
-  height: 120px;
+  height: 100%;
   margin-top: 0.5rem;
   padding: 0.75rem;
   font-size: 1rem;

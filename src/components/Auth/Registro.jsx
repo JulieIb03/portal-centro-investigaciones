@@ -18,7 +18,7 @@ import {
 export default function Registro() {
   const [formData, setFormData] = useState({
     nombre: "",
-    rol: "",
+    rol: "docente",
     correo: "",
     contrasena: "",
   });
@@ -30,6 +30,7 @@ export default function Registro() {
 
   const [mensaje, setMensaje] = useState("");
   const [errorResponse, setErrorResponse] = useState("");
+  const [mostrarContrasena, setMostrarContrasena] = useState(false);
 
   const handleRegistro = async (e) => {
     e.preventDefault();
@@ -78,8 +79,9 @@ export default function Registro() {
         </div>
         <div className="form">
           <form onSubmit={handleRegistro}>
-            <h1>REGISTRO</h1>
-            <label htmlFor="nombre">Nombre</label>
+            <h1 style={{ margin: 0 }}>REGISTRO</h1>
+            <h2 style={{ margin: "0 auto 20px auto" }}>DOCENTES</h2>
+            <label htmlFor="nombre">Nombre y Apellido</label>
             <div className="input-container">
               <svg
                 width="20"
@@ -112,7 +114,7 @@ export default function Registro() {
                 required
               />
             </div>
-            <label htmlFor="rol">Rol</label>
+            {/* <label htmlFor="rol">Rol</label>
             <div className="input-container">
               <select
                 id="rol"
@@ -125,7 +127,7 @@ export default function Registro() {
                 <option value="docente">Docente</option>
                 <option value="revisor">Revisor</option>
               </select>
-            </div>
+            </div> */}
             <label htmlFor="correo">Correo</label>
             <div className="input-container">
               <svg
@@ -152,7 +154,7 @@ export default function Registro() {
               />
             </div>
             <label htmlFor="contrasena">Contraseña</label>
-            <div className="input-container">
+            <div className="input-container  password-container">
               <svg
                 xmlns="http://www.w3.org/2000/svg"
                 width="30"
@@ -173,12 +175,68 @@ export default function Registro() {
               </svg>
               <input
                 id="contrasena"
-                type="password"
+                type={mostrarContrasena ? "text" : "password"}
                 name="contrasena"
                 value={formData.contrasena}
                 onChange={handleChange}
                 required
               />
+              <span
+                className="toggle-password"
+                onClick={() => setMostrarContrasena(!mostrarContrasena)}
+              >
+                {mostrarContrasena ? (
+                  // 👁 ojo abierto
+                  <svg
+                    width="25px"
+                    height="25px"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                  >
+                    <path
+                      fill-rule="evenodd"
+                      clip-rule="evenodd"
+                      d="M22 12.0002C20.2531 15.5764 15.8775 19 11.9998 19C8.12201 19 3.74646 15.5764 2 11.9998"
+                      stroke="#8C8D8E"
+                      stroke-width="2"
+                      stroke-linecap="round"
+                      stroke-linejoin="round"
+                    />
+                    <path
+                      fill-rule="evenodd"
+                      clip-rule="evenodd"
+                      d="M22 12.0002C20.2531 8.42398 15.8782 5 12.0005 5C8.1227 5 3.74646 8.42314 2 11.9998"
+                      stroke="#8C8D8E"
+                      stroke-width="2"
+                      stroke-linecap="round"
+                      stroke-linejoin="round"
+                    />
+                    <path
+                      d="M15 12C15 13.6569 13.6569 15 12 15C10.3431 15 9 13.6569 9 12C9 10.3431 10.3431 9 12 9C13.6569 9 15 10.3431 15 12Z"
+                      stroke="#8C8D8E"
+                      stroke-width="2"
+                      stroke-linecap="round"
+                      stroke-linejoin="round"
+                    />
+                  </svg>
+                ) : (
+                  // 👁‍🗨 ojo tachado
+                  <svg
+                    width="25px"
+                    height="25px"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                  >
+                    <path
+                      d="M4 4L9.87868 9.87868M20 20L14.1213 14.1213M9.87868 9.87868C9.33579 10.4216 9 11.1716 9 12C9 13.6569 10.3431 15 12 15C12.8284 15 13.5784 14.6642 14.1213 14.1213M9.87868 9.87868L14.1213 14.1213M6.76821 6.76821C4.72843 8.09899 2.96378 10.026 2 11.9998C3.74646 15.5764 8.12201 19 11.9998 19C13.7376 19 15.5753 18.3124 17.2317 17.2317M9.76138 5.34717C10.5114 5.12316 11.2649 5 12.0005 5C15.8782 5 20.2531 8.42398 22 12.0002C21.448 13.1302 20.6336 14.2449 19.6554 15.2412"
+                      stroke="#8C8D8E"
+                      stroke-width="2"
+                      stroke-linecap="round"
+                      stroke-linejoin="round"
+                    />
+                  </svg>
+                )}
+              </span>
             </div>
             {errorResponse && (
               <div className="error-message">{errorResponse}</div>

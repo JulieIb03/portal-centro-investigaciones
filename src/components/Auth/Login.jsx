@@ -17,6 +17,7 @@ export default function Login() {
   const { user, loading } = useAuth(); // Obtén el usuario del AuthProvider
   const navigate = useNavigate();
   const [errorResponse, setErrorResponse] = useState("");
+  const [mostrarContrasena, setMostrarContrasena] = useState(false);
 
   const handleChange = (e) => {
     const { name, value } = e.target;
@@ -85,7 +86,7 @@ export default function Login() {
             </div>
 
             <label htmlFor="contrasena">Contraseña</label>
-            <div className="input-container">
+            <div className="input-container  password-container">
               <svg
                 xmlns="http://www.w3.org/2000/svg"
                 width="30"
@@ -106,12 +107,68 @@ export default function Login() {
               </svg>
               <input
                 id="contrasena"
-                type="password"
+                type={mostrarContrasena ? "text" : "password"}
                 name="contrasena"
                 value={formData.contrasena}
                 onChange={handleChange}
                 required
               />
+              <span
+                className="toggle-password"
+                onClick={() => setMostrarContrasena(!mostrarContrasena)}
+              >
+                {mostrarContrasena ? (
+                  // 👁 ojo abierto
+                  <svg
+                    width="25px"
+                    height="25px"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                  >
+                    <path
+                      fill-rule="evenodd"
+                      clip-rule="evenodd"
+                      d="M22 12.0002C20.2531 15.5764 15.8775 19 11.9998 19C8.12201 19 3.74646 15.5764 2 11.9998"
+                      stroke="#8C8D8E"
+                      stroke-width="2"
+                      stroke-linecap="round"
+                      stroke-linejoin="round"
+                    />
+                    <path
+                      fill-rule="evenodd"
+                      clip-rule="evenodd"
+                      d="M22 12.0002C20.2531 8.42398 15.8782 5 12.0005 5C8.1227 5 3.74646 8.42314 2 11.9998"
+                      stroke="#8C8D8E"
+                      stroke-width="2"
+                      stroke-linecap="round"
+                      stroke-linejoin="round"
+                    />
+                    <path
+                      d="M15 12C15 13.6569 13.6569 15 12 15C10.3431 15 9 13.6569 9 12C9 10.3431 10.3431 9 12 9C13.6569 9 15 10.3431 15 12Z"
+                      stroke="#8C8D8E"
+                      stroke-width="2"
+                      stroke-linecap="round"
+                      stroke-linejoin="round"
+                    />
+                  </svg>
+                ) : (
+                  // 👁‍🗨 ojo tachado
+                  <svg
+                    width="25px"
+                    height="25px"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                  >
+                    <path
+                      d="M4 4L9.87868 9.87868M20 20L14.1213 14.1213M9.87868 9.87868C9.33579 10.4216 9 11.1716 9 12C9 13.6569 10.3431 15 12 15C12.8284 15 13.5784 14.6642 14.1213 14.1213M9.87868 9.87868L14.1213 14.1213M6.76821 6.76821C4.72843 8.09899 2.96378 10.026 2 11.9998C3.74646 15.5764 8.12201 19 11.9998 19C13.7376 19 15.5753 18.3124 17.2317 17.2317M9.76138 5.34717C10.5114 5.12316 11.2649 5 12.0005 5C15.8782 5 20.2531 8.42398 22 12.0002C21.448 13.1302 20.6336 14.2449 19.6554 15.2412"
+                      stroke="#8C8D8E"
+                      stroke-width="2"
+                      stroke-linecap="round"
+                      stroke-linejoin="round"
+                    />
+                  </svg>
+                )}
+              </span>
             </div>
             <p>
               ¿No tienes cuenta? <a href="/registro">Regístrate</a>

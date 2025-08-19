@@ -15,6 +15,7 @@ import {
   arrayUnion,
 } from "firebase/firestore";
 import { useAuth } from "./Auth/AuthProvider";
+import CerrarIcon from "../assets/x.png";
 
 // // Constantes fuera del componente para evitar ciclos infinitos
 // const opcionesSubvinculacion = {
@@ -83,6 +84,7 @@ const SubidaDocumentos = ({
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
   const [ultimaRevision, setUltimaRevision] = useState(null);
+  const [uploadProgress, setUploadProgress] = useState({});
 
   const [opcionesSubvinculacion, setOpcionesSubvinculacion] = useState({});
   const [documentosRequeridos, setDocumentosRequeridos] = useState({});
@@ -142,11 +144,6 @@ const SubidaDocumentos = ({
       if (!esReenvio || !codigoInicial || !ultimaRevisionId) {
         return;
       }
-
-      console.log(
-        "ID de última revisión que se intentará consultar:",
-        ultimaRevisionId
-      ); // 👈 Mostrar ID
 
       try {
         const revisionRef = doc(db, `/revisiones`, ultimaRevisionId);
@@ -235,6 +232,12 @@ const SubidaDocumentos = ({
 
     if (!file) return;
 
+    // Forzar el nombre del archivo a que sea igual al label
+    const extension = file.name.split(".").pop(); // conserva extensión original
+    const renamedFile = new File([file], `${nombreDocumento}.${extension}`, {
+      type: file.type,
+    });
+
     if (file.size > MAX_FILE_SIZE) {
       setError("El archivo no debe exceder los 5MB");
       return;
@@ -248,17 +251,34 @@ const SubidaDocumentos = ({
     setLoading(true);
     setError(null);
 
+    // Inicializar progreso
+    setUploadProgress((prev) => ({ ...prev, [nombreDocumento]: 10 }));
+
     const formDataArchivo = new FormData();
-    formDataArchivo.append("file", file);
+    formDataArchivo.append("file", renamedFile);
     formDataArchivo.append("codigoProyecto", formData.codigoProyecto);
     formDataArchivo.append("usuarioEmail", user.nombre);
     formDataArchivo.append("nombrePostulante", formData.nombrePostulante);
 
     try {
+      // Simulación de progreso antes de terminar la subida
+      const fakeProgress = setInterval(() => {
+        setUploadProgress((prev) => {
+          const current = prev[nombreDocumento] || 0;
+          if (current >= 90) {
+            clearInterval(fakeProgress);
+            return prev;
+          }
+          return { ...prev, [nombreDocumento]: current + 10 };
+        });
+      }, 300);
+
       const response = await fetch("/api/upload", {
         method: "POST",
         body: formDataArchivo,
       });
+
+      clearInterval(fakeProgress);
 
       const data = await response.json();
 
@@ -271,15 +291,19 @@ const SubidaDocumentos = ({
         documentos: {
           ...prev.documentos,
           [nombreDocumento]: {
-            nombre: file.name,
+            nombre: renamedFile.name,
             url: data.embedLink, // 👈 usar el embedLink directamente
             fechaSubida: new Date().toISOString(),
           },
         },
       }));
+
+      // Marcar progreso completado al 100%
+      setUploadProgress((prev) => ({ ...prev, [nombreDocumento]: 100 }));
     } catch (error) {
       console.error("Error al subir archivo:", error);
       setError("Error al subir el archivo. Intente nuevamente.");
+      setUploadProgress((prev) => ({ ...prev, [nombreDocumento]: 0 }));
     } finally {
       setLoading(false);
     }
@@ -294,9 +318,6 @@ const SubidaDocumentos = ({
   };
 
   const handleSubmit = async (e) => {
-    console.log("🧪 esReenvio:", esReenvio);
-    console.log("📄 Documentos actuales:", formData.documentos);
-
     e.preventDefault();
     setLoading(true);
     setError(null); // Limpiar errores anteriores
@@ -318,11 +339,6 @@ const SubidaDocumentos = ({
       if (esReenvio) {
         // ─── REENVIO DE DOCUMENTOS ───
         const postulacionRef = doc(db, "postulaciones", postulacionId);
-
-        console.log("🔄 Reenvío activado");
-        console.log("📄 ID postulación objetivo:", codigoInicial);
-        console.log("👤 UID del usuario autenticado:", user?.uid);
-        console.log("📄 Documentos a subir:", formData.documentos);
 
         // 1. Filtrar solo los documentos que fueron modificados (nuevos o actualizados)
         const documentosActualizados = {};
@@ -382,8 +398,6 @@ const SubidaDocumentos = ({
                   `Error al enviar correo a ${revisor.correo}:`,
                   errorText
                 );
-              } else {
-                console.log(`✅ Correo enviado a ${revisor.correo}`);
               }
             }
           } catch (error) {
@@ -407,7 +421,6 @@ const SubidaDocumentos = ({
         });
 
         //Notificación por correo
-        console.log("📌 Buscando usuarios con rol 'revisor'...");
         const usuariosRef = collection(db, "usuarios");
 
         const q = query(usuariosRef, where("rol", "==", "revisor"));
@@ -416,15 +429,9 @@ const SubidaDocumentos = ({
         if (querySnapshot.empty) {
           console.log("❌ No se encontraron usuarios con rol 'revisor'");
         } else {
-          console.log("✅ Usuarios con rol 'revisor' encontrados:");
           const revisores = [];
           querySnapshot.forEach((doc) => {
             const usuario = doc.data();
-            console.log(
-              `- ${usuario.nombre || "Sin nombre"} (${
-                usuario.correo || "Sin correo"
-              })`
-            );
 
             if (usuario.correo) {
               revisores.push({
@@ -434,9 +441,6 @@ const SubidaDocumentos = ({
               });
             }
           });
-
-          console.log(`📧 Total de revisores encontrados: ${revisores.length}`);
-          console.log("👤 Lista completa de revisores:", revisores);
 
           // Enviar correos en paralelo
           await Promise.all(
@@ -496,116 +500,163 @@ const SubidaDocumentos = ({
 
   return (
     <div className="form-container">
-      <h2>{esReenvio ? "Reenvío de documentos" : "Nueva postulación"}</h2>
-      {error && <div className="error-message">{error}</div>}
-
-      <form className="subidaForm" onSubmit={handleSubmit}>
-        <label htmlFor="codigoProyecto">Código del Proyecto:</label>
-        <input
-          type="text"
-          id="codigoProyecto"
-          name="codigoProyecto"
-          value={formData.codigoProyecto}
-          onChange={handleChange}
-          required
-          disabled={esReenvio}
-        />
-
-        <label htmlFor="tipoVinculacion">Tipo de vinculación:</label>
-        <select
-          id="tipoVinculacion"
-          name="tipoVinculacion"
-          value={formData.tipoVinculacion}
-          onChange={handleChange}
-          required
-          disabled={esReenvio}
-        >
-          <option value="">Seleccione</option>
-          {Object.keys(opcionesSubvinculacion).map((id) => (
-            <option key={id} value={id}>
-              {id}
-            </option>
-          ))}
-        </select>
-
-        <label htmlFor="subvinculacion">Subcategoría:</label>
-        <select
-          id="subvinculacion"
-          name="subvinculacion"
-          value={formData.subvinculacion}
-          onChange={handleChange}
-          required
-          disabled={esReenvio || !formData.tipoVinculacion}
-        >
-          <option value="">Seleccione</option>
-          {subvinculaciones.map((sub) => (
-            <option key={sub} value={sub}>
-              {sub}
-            </option>
-          ))}
-        </select>
-
-        <label htmlFor="nombrePostulante">Nombre del Postulante:</label>
-        <input
-          id="nombrePostulante"
-          name="nombrePostulante"
-          type="text"
-          value={formData.nombrePostulante}
-          onChange={handleChange}
-          required
-          disabled={esReenvio}
-        />
-
-        <div id="documentosContainer">
-          <h3>Documentos Requeridos</h3>
-          <div id="documentosLista">
-            {documentos.map((docNombre, i) => {
-              const aprobado = documentoEstaAprobado(docNombre);
-              const docData = formData.documentos[docNombre];
-
-              return (
-                <div key={i} style={{ margin: "10px 0" }}>
-                  <label>{docNombre}</label>
-                  {aprobado ? (
-                    <div className="documento-aprobado">
-                      ✓ {docData?.nombre || "Documento aprobado"}
-                      {docData?.url && (
-                        <a
-                          href={docData.url}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          style={{ marginLeft: "10px", color: "#1a73e8" }}
-                        >
-                          (Ver documento)
-                        </a>
-                      )}
-                    </div>
-                  ) : (
-                    <>
-                      <input
-                        type="file"
-                        onChange={(e) => handleArchivo(e, docNombre)}
-                        disabled={loading || aprobado}
-                        required={!esReenvio && !aprobado}
-                        accept=".pdf"
-                      />
-                      {docData && !aprobado && (
-                        <span className="file-uploaded">
-                          ✓ {docData.nombre}
-                        </span>
-                      )}
-                    </>
-                  )}
-                </div>
-              );
-            })}
-          </div>
-        </div>
-
-        <button type="submit" disabled={loading}>
-          {loading ? "Procesando..." : esReenvio ? "Reenviar" : "Enviar"}
+      <div className="modal-header">
+        <button className="close-button" onClick={onClose}>
+          <img src={CerrarIcon} alt="Cerrar" className="w-6 h-6" />
         </button>
-      </form>
+        <h2 style={{ margin: 0 }}>
+          {esReenvio ? "Reenvío de documentos" : "Nueva postulación"}
+        </h2>
+      </div>
+      <div className="modal-body">
+        {error && <div className="error-message">{error}</div>}
+        <form className="subidaForm" onSubmit={handleSubmit}>
+          <label htmlFor="codigoProyecto">Código del Proyecto:</label>
+          <input
+            type="text"
+            id="codigoProyecto"
+            name="codigoProyecto"
+            value={formData.codigoProyecto}
+            onChange={handleChange}
+            required
+            disabled={esReenvio}
+          />
+
+          <label htmlFor="tipoVinculacion">Tipo de vinculación:</label>
+          <select
+            id="tipoVinculacion"
+            name="tipoVinculacion"
+            value={formData.tipoVinculacion}
+            onChange={handleChange}
+            required
+            disabled={esReenvio}
+          >
+            <option value="">Seleccione</option>
+            {Object.keys(opcionesSubvinculacion).map((id) => (
+              <option key={id} value={id}>
+                {id}
+              </option>
+            ))}
+          </select>
+
+          <label htmlFor="subvinculacion">Subcategoría:</label>
+          <select
+            id="subvinculacion"
+            name="subvinculacion"
+            value={formData.subvinculacion}
+            onChange={handleChange}
+            required
+            disabled={esReenvio || !formData.tipoVinculacion}
+          >
+            <option value="">Seleccione</option>
+            {subvinculaciones.map((sub) => (
+              <option key={sub} value={sub}>
+                {sub}
+              </option>
+            ))}
+          </select>
+
+          <label htmlFor="nombrePostulante">Nombre del Postulante:</label>
+          <input
+            id="nombrePostulante"
+            name="nombrePostulante"
+            type="text"
+            value={formData.nombrePostulante}
+            onChange={handleChange}
+            required
+            disabled={esReenvio}
+          />
+
+          <div id="documentosContainer">
+            <h3 style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+              Documentos Requeridos
+              <div className="tooltip-container">
+                <span className="info-icon">
+                  <svg
+                    fill="#0b3c4d"
+                    width="20px"
+                    height="20px"
+                    viewBox="0 0 512 512"
+                  >
+                    <path d="M285.172,331.453c-12.453,13.25-20.547,18.781-26.094,18.781c-3.859,0-5.172-3.422-4.312-11.141 c2.594-20.062,17.531-84.578,21.781-107.625c4.266-19.719,3-29.953-2.562-29.953c-10.641,0-36.734,17.516-53.828,35.016 c-0.875,1.344-2.562,8.578-1.688,11.125c0,0.875,1.266,1.312,1.266,1.312c10.266-8.125,18.391-12.844,23.109-12.844 c2.109,0,2.938,3.406,1.688,9.406c-5.125,25.625-13.672,65.406-20.078,98.281c-5.984,28.672-2.172,40.188,6.812,40.188 s33.766-11.984,53.906-38.906c0.812-2.094,1.641-10.188,1.25-12.359C286.422,331.906,285.172,331.453,285.172,331.453z" />{" "}
+                    <path d="M281.281,128c-7.297,0-16.25,3.414-20.516,7.703c-1.688,2.141-3.406,8.539-3.859,11.945 c0.453,7.711,2.578,11.984,6.859,14.562c2.109,1.68,16.219,0.414,19.219-1.312c5.188-3.398,9.828-10.25,10.703-18.375 c0.375-3.82-0.438-8.984-2.141-11.531C290.688,129.719,287.25,128,281.281,128z" />{" "}
+                    <path d="M256,0C114.609,0,0,114.609,0,256s114.609,256,256,256s256-114.609,256-256S397.391,0,256,0z M256,472 c-119.297,0-216-96.703-216-216S136.703,40,256,40s216,96.703,216,216S375.297,472,256,472z" />{" "}
+                  </svg>
+                </span>
+                <div className="tooltip-content">
+                  <b>Lista de documentos:</b>
+                  <ul>
+                    {documentos.map((doc, i) => (
+                      <li key={i}>{doc}</li>
+                    ))}
+                  </ul>
+                </div>
+              </div>
+            </h3>
+            <div id="documentosLista">
+              {documentos.map((docNombre, i) => {
+                const aprobado = documentoEstaAprobado(docNombre);
+                const docData = formData.documentos[docNombre];
+
+                return (
+                  <div key={i} style={{ margin: "10px 0" }}>
+                    <label>{docNombre}</label>
+                    {aprobado ? (
+                      <div className="documento-aprobado">
+                        ✓ {docData?.nombre || "Documento aprobado"}
+                        {docData?.url && (
+                          <a
+                            href={docData.url}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            style={{ marginLeft: "10px", color: "#1a73e8" }}
+                          >
+                            (Ver documento)
+                          </a>
+                        )}
+                      </div>
+                    ) : (
+                      <>
+                        <input
+                          type="file"
+                          onChange={(e) => handleArchivo(e, docNombre)}
+                          disabled={loading || aprobado}
+                          required={!esReenvio && !aprobado}
+                          accept=".pdf"
+                        />
+                        {uploadProgress[docNombre] > 0 &&
+                          uploadProgress[docNombre] < 100 && (
+                            <div className="progress-bar">
+                              <div
+                                className="progress-bar-fill"
+                                style={{
+                                  width: `${uploadProgress[docNombre]}%`,
+                                }}
+                              ></div>
+                            </div>
+                          )}
+                        {docData && !aprobado && (
+                          <span className="file-uploaded">
+                            ✓ {docData.nombre}
+                          </span>
+                        )}
+                      </>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+
+          <button
+            type="submit"
+            disabled={loading}
+            style={{ marginTop: "10px" }}
+          >
+            {loading ? "Procesando..." : esReenvio ? "Reenviar" : "Enviar"}
+          </button>
+        </form>
+      </div>
     </div>
   );
 };

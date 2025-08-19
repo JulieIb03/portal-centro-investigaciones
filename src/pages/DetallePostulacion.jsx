@@ -4,27 +4,14 @@ import { useParams, useNavigate } from "react-router-dom";
 import SubidaDocumentos from "../components/Subida";
 import "../styles/Default.css";
 import "../styles/DetallePostulacion.css";
-import {
-  doc,
-  getDoc,
-  collection,
-  // query,
-  // where,
-  // getDocs,
-} from "firebase/firestore";
+import { doc, getDoc, collection } from "firebase/firestore";
 import { db } from "../Credenciales";
 import { useAuth } from "../components/Auth/AuthProvider";
-import CerrarIcon from "../assets/x.png";
 
 const Modal = ({ children, onClose }) => {
   return (
     <div className="modal-overlay">
-      <div className="modal-content">
-        <button className="close-button" onClick={onClose}>
-          <img src={CerrarIcon} alt="Cerrar" className="w-6 h-6" />
-        </button>
-        {children}
-      </div>
+      <div className="modal-content">{children}</div>
     </div>
   );
 };
@@ -42,8 +29,6 @@ const DetallePostulacion = () => {
   const navigate = useNavigate();
 
   useEffect(() => {
-    console.log("usuario detectado", user);
-    console.log("ID de la postulación:", id);
 
     if (!authLoading) {
       if (!user) {
@@ -70,7 +55,6 @@ const DetallePostulacion = () => {
           }
 
           const postulacionData = postulacionSnap.data();
-          console.log("🔍 Postulación cargada:", postulacionData);
 
           if (
             user.rol === "docente" &&
@@ -335,6 +319,14 @@ const DetallePostulacion = () => {
                 Reenviar documentos
               </button>
             )}
+            {user?.rol === "revisor" && postulacion.estado !== "Aprobado" && (
+              <button
+                className="btnAzul"
+                onClick={() => navigate(`/revision/${postulacion.id}`)}
+              >
+                Revisar
+              </button>
+            )}
           </div>
 
           {open && (
@@ -357,7 +349,7 @@ const DetallePostulacion = () => {
             <thead>
               <tr>
                 <th>Fecha de envío</th>
-                <th>N° Revisiones</th>
+                <th>N° Revisión</th>
                 <th>Estado</th>
                 <th>
                   {user?.rol === "revisor" ? "Documentos" : "Comentarios"}
@@ -375,10 +367,7 @@ const DetallePostulacion = () => {
                   </td>
                 </tr>
               ) : user?.rol === "revisor" && historial.length === 0 ? (
-                <tr
-                  className="clickable-row"
-                  onClick={() => navigate(`/revision/${postulacion.id}`)}
-                >
+                <tr>
                   <td>{postulacion.id}</td>
                   <td>{formatDate(postulacion.fechaCreacion)}</td>
                   <td>0</td>
@@ -407,15 +396,7 @@ const DetallePostulacion = () => {
                 </tr>
               ) : (
                 historial.map((revision) => (
-                  <tr
-                    key={revision.id}
-                    className={user?.rol === "revisor" ? "clickable-row" : ""}
-                    onClick={() => {
-                      if (user?.rol === "revisor") {
-                        navigate(`/revision/${postulacion.id}`);
-                      }
-                    }}
-                  >
+                  <tr key={revision.id}>
                     <td>{formatDate(postulacion.fechaCreacion)}</td>
                     <td>{revision.numeroRevision || 0}</td>
                     <td className={revision.estadoFinal?.replace(/\s/g, "-")}>
