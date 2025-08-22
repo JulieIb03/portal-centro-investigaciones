@@ -17,59 +17,6 @@ import {
 import { useAuth } from "./Auth/AuthProvider";
 import CerrarIcon from "../assets/x.png";
 
-// // Constantes fuera del componente para evitar ciclos infinitos
-// const opcionesSubvinculacion = {
-//   contrato_ops: ["Asistente de Investigación", "Joven Investigador"],
-//   asistente_graduado: ["Proceso Nuevo", "Proceso de Renovación"],
-//   estudiantes: ["Auxiliar de Pregrado", "Auxiliar de Posgrado"],
-// };
-
-// const documentosRequeridos = {
-//   "Asistente de Investigación": [
-//     "Formato de Solicitud orden y/o Contrato",
-//     "Concertación de entregables IN-IV-F-26",
-//     "Formato Único de Hoja de Vida (DAFP)",
-//     "Fotocopia de la cédula de ciudadanía ampliada al 150%",
-//     "Fotocopia de la libreta militar (si aplica)",
-//     "Fotocopia de certificados laborales",
-//     "Certificados Académicos (actas de grado-diplomas)",
-//     "Fotocopia de RUT actualizado",
-//     "Formato de Confidencialidad de la UMNG",
-//   ],
-//   "Joven Investigador": [
-//     "Acta de pregrado (Máximo 2 años de egreso)",
-//     "Copia de la cédula ampliada al 150% (Menor de 28 años)",
-//     "Certificado de participación en semilleros o proyectos",
-//     "Carta de compromiso de no estar en otro proyecto",
-//   ],
-//   "Proceso Nuevo": [
-//     "Convocatoria de vinculación",
-//     "Resultados de la convocatoria",
-//     "Recibo de matrícula",
-//     "Carta de presentación del líder del proyecto",
-//     "Certificado de notas (mínimo 3.6 o 4.0 según avance)",
-//   ],
-//   "Proceso de Renovación": [
-//     "Recibo de matrícula",
-//     "Informe semestral de actividades",
-//     "Evaluación del docente-tutor",
-//     "Certificado de notas (mínimo 4.0)",
-//   ],
-//   "Auxiliar de Pregrado": [
-//     "Convocatoria de vinculación",
-//     "Resultados de la convocatoria",
-//     "Certificación de estudios (mínimo 70% del programa)",
-//     "Carta de presentación",
-//     "Fotocopia de cédula",
-//   ],
-//   "Auxiliar de Posgrado": [
-//     "Convocatoria de vinculación",
-//     "Resultados de la convocatoria",
-//     "Certificación de registro académico",
-//     "Carta de presentación y autodeclaración",
-//   ],
-// };
-
 const SubidaDocumentos = ({
   postulacionId: postulacionId = "",
   codigoProyecto: codigoInicial = "",
@@ -200,14 +147,19 @@ const SubidaDocumentos = ({
   }, [esReenvio, codigoInicial, ultimaRevisionId, documentosPostulacion]);
 
   useEffect(() => {
-    if (formData.tipoVinculacion) {
+    if (
+      formData.tipoVinculacion &&
+      opcionesSubvinculacion[formData.tipoVinculacion]
+    ) {
       setSubvinculaciones(
-        opcionesSubvinculacion[formData.tipoVinculacion] || []
+        opcionesSubvinculacion[formData.tipoVinculacion].filter(
+          (sub) => sub && sub.trim() !== ""
+        )
       );
     } else {
       setSubvinculaciones([]);
     }
-  }, [formData.tipoVinculacion]);
+  }, [formData.tipoVinculacion, opcionesSubvinculacion]);
 
   useEffect(() => {
     if (formData.subvinculacion) {
@@ -532,11 +484,13 @@ const SubidaDocumentos = ({
             disabled={esReenvio}
           >
             <option value="">Seleccione</option>
-            {Object.keys(opcionesSubvinculacion).map((id) => (
-              <option key={id} value={id}>
-                {id}
-              </option>
-            ))}
+            {Object.keys(opcionesSubvinculacion)
+              .filter((id) => id && id.trim() !== "") // filtrar vacíos
+              .map((id) => (
+                <option key={id} value={id}>
+                  {id}
+                </option>
+              ))}
           </select>
 
           <label htmlFor="subvinculacion">Subcategoría:</label>
@@ -549,11 +503,13 @@ const SubidaDocumentos = ({
             disabled={esReenvio || !formData.tipoVinculacion}
           >
             <option value="">Seleccione</option>
-            {subvinculaciones.map((sub) => (
-              <option key={sub} value={sub}>
-                {sub}
-              </option>
-            ))}
+            {subvinculaciones
+              .filter((sub) => sub && sub.trim() !== "") // filtrar vacíos
+              .map((sub) => (
+                <option key={sub} value={sub}>
+                  {sub}
+                </option>
+              ))}
           </select>
 
           <label htmlFor="nombrePostulante">Nombre del Postulante:</label>

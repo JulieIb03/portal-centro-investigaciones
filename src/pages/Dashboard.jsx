@@ -145,6 +145,13 @@ const Dashboard = () => {
     });
   };
 
+  // Helper para mostrar nombre del estado según rol
+  const getEstadoLabel = (estado, rol) => {
+    if (rol === "revisor" && estado === "Pendiente") return "Nuevo";
+    if (rol === "docente" && estado === "En corrección") return "Devuelto";
+    return estado;
+  };
+
   return (
     <Header>
       <div className="dashboard">
@@ -162,7 +169,7 @@ const Dashboard = () => {
               onClick={() => setFiltroEstado(filtroEstado === key ? null : key)}
             >
               <div className="card-value">{value}</div>
-              <div className="card-label">{key}</div>
+              <div className="card-label">{getEstadoLabel(key, user?.rol)}</div>
             </div>
           ))}
         </div>
@@ -230,7 +237,7 @@ const Dashboard = () => {
                   <td>{formatDate(p.ultimaRevisionFecha)}</td>
                   <td>
                     <p className={`estado ${p.estado.replace(" ", "-")}`}>
-                      {p.estado}
+                      {getEstadoLabel(p.estado, user?.rol)}
                     </p>
                   </td>
                 </tr>

@@ -29,7 +29,6 @@ const DetallePostulacion = () => {
   const navigate = useNavigate();
 
   useEffect(() => {
-
     if (!authLoading) {
       if (!user) {
         setError("No estás autenticado.");
@@ -175,6 +174,13 @@ const DetallePostulacion = () => {
     );
   };
 
+  // Helper para mostrar nombre del estado según rol
+  const getEstadoLabel = (estado, rol) => {
+    if (rol === "revisor" && estado === "Pendiente") return "Nuevo";
+    if (rol === "docente" && estado === "En corrección") return "Devuelto";
+    return estado;
+  };
+
   return (
     <Header>
       <header className="detalle-header">
@@ -297,7 +303,7 @@ const DetallePostulacion = () => {
           <div className="estado-card">
             <p>Estado</p>
             <h3 className={`${postulacion.estado.replace(/\s/g, "-")}`}>
-              {postulacion.estado}
+              {getEstadoLabel(postulacion.estado, user?.rol)}
             </h3>
           </div>
         </div>
@@ -400,7 +406,10 @@ const DetallePostulacion = () => {
                     <td>{formatDate(postulacion.fechaCreacion)}</td>
                     <td>{revision.numeroRevision || 0}</td>
                     <td className={revision.estadoFinal?.replace(/\s/g, "-")}>
-                      {revision.estadoFinal || "Pendiente"}
+                      {getEstadoLabel(
+                        revision.estadoFinal || "Pendiente",
+                        user?.rol
+                      )}
                     </td>
                     <td>
                       {user?.rol === "revisor"

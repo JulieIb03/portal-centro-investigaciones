@@ -509,9 +509,14 @@ const RevisionDocumentos = () => {
                 console.log("✅ Correo enviado");
                 navigate("/Dashboard");
               } catch (error) {
-                console.error("❌ Error al procesar la revisión:", error);
+                console.error(
+                  "❌ Error al procesar la revisión:",
+                  error.message,
+                  error.stack
+                );
                 alert(
-                  "❌ Ocurrió un error al guardar la revisión o enviar el correo"
+                  "❌ Ocurrió un error al guardar la revisión o enviar el correo: " +
+                    error.message
                 );
               } finally {
                 setIsSubmitting(false);
