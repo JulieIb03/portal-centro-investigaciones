@@ -1,7 +1,7 @@
 # Portal Centro de Investigaciones UMNG
 
 Este proyecto es un sistema web desarrollado para la **revisión de los documentos requeridos** para los diferentes proyectos dentro del Centro de Investigaciones de la UMNG.
-El portal permite a **docentes** crear postulaciones para los proyectos existentes dentro del cnetro de investigaciones con sus respectivos documentos y a los **revisores** visualizar los documentos de dichas postulaciones y dar sus comentarios o aprobación, asi como gestionar los documentos necesarios para cada proyecto.
+El portal permite a **docentes** crear postulaciones para los proyectos existentes dentro del centro de investigaciones con sus respectivos documentos y a los **revisores** visualizar los documentos de dichas postulaciones y dar sus comentarios o aprobación, asi como gestionar los documentos necesarios para cada proyecto.
 
 ## 🚀 Demo
 El portal está desplegado en **Vercel**:  
