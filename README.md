@@ -7,7 +7,7 @@ El portal permite a **docentes** crear postulaciones para los proyectos existent
 El portal está desplegado en **Vercel**:  
 👉 [Portal Centro de Investigaciones](https://portal-centro-investigaciones-umng.vercel.app/)
 
-## 🔑 Accesos de 
+## 🔑 Accesos
 - El acceso de revisores es único y administrado por el Centro de Investigaciones. Los revisores deben ingresar con las credenciales proporcionadas y no es posible crear cuentas adicionales.
 - En el caso docente, se debe crear una cuenta dentro del portal.
 
