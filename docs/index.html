@@ -1,0 +1,106 @@
+<!DOCTYPE html>
+<html lang="es">
+  <head>
+    <meta charset="UTF-8" />
+    <title>📖 Documentación del Proyecto</title>
+    <style>
+      body {
+        font-family: "Poppins";
+        margin: 0;
+        background-color: #F3F4F7;
+        color: #5b5b5b;
+      }
+      h1,h2{
+        color: #0b3c4d;
+      }
+      header {
+        display: flex;
+        gap: 15px;
+        align-items: center;
+        background-color: #0b3c4d;
+        padding: 0 20px;
+      }
+      .main-content {
+        display: flex;
+      }
+      aside {
+        width: 250px;
+        background: white;
+        padding: 20px;
+        overflow-y: auto;
+      }
+      main {
+        flex: 1;
+        padding: 20px;
+      }
+      a {
+        display: block;
+        margin-bottom: 10px;
+        text-decoration: none;
+        color: #333;
+      }
+      a:hover {
+        font-weight: bold;
+      }
+    </style>
+  </head>
+  <body>
+    <header>
+      <img
+        src="../src/assets/LogoUMNG.png"
+        alt="LogoUMNG"
+        style="width: 50px"
+      />
+      <h3 style="color: white">Portal Centro de Investigaciones</h1>
+    </header>
+    <div class="main-content">
+      <aside>
+        <h2>📚 Documentación</h2>
+        <a href="../README.md">Introducción</a>
+        <a href="styles-design.md">Estilos y Diseño</a>
+        <a href="project-structure.md">Estructura del Proyecto</a>
+        <a href="installation.md">Instalación</a>
+        <a href="firebase.md">Firebase</a>
+        <a href="firestore.md">Firestore</a>
+        <a href="authentication.md">Autenticación</a>
+        <a href="google-drive.md">Google Drive</a>
+        <a href="navigation.md">Navegación y Pantallas</a>
+        <a href="components.md">Componentes</a>
+        <a href="common-errors.md">Errores comunes</a>
+        <a href="deployment.md">Despliegue</a>
+        <a href="roadmap.md">Roadmap</a>
+        <a href="contribution.md">Contribución</a>
+      </aside>
+
+      <main id="content">
+        <h1>Bienvenido a la documentación</h1>
+        <p>Selecciona un archivo en la izquierda para comenzar.</p>
+      </main>
+    </div>
+    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+    <script>
+    const content = document.getElementById("content");
+
+    // 👉 Función para cargar archivos .md
+    async function loadDoc(file) {
+        const res = await fetch(file);
+        const text = await res.text();
+        content.innerHTML = marked.parse(text);
+    }
+
+    // 👉 Eventos para los links del sidebar
+    document.querySelectorAll("aside a").forEach((link) => {
+        link.addEventListener("click", async (e) => {
+        e.preventDefault();
+        const file = link.getAttribute("href");
+        loadDoc(file);
+        });
+    });
+
+    // 👉 Al iniciar, carga introducción.md por defecto
+    window.onload = () => {
+        loadDoc("../README.md");
+    };
+    </script>
+  </body>
+</html>
