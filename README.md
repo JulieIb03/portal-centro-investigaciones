@@ -29,4 +29,4 @@ Este proyecto se encuentra en fase de **beta**, con sesiones grabadas para anál
 
 ---
 
-Realizado por Julie Alejandra Ibarra como parte de la pasantía social necesaria para la condonación del crédito del fondo FEST de la Secreatría de Educación.
+Realizado por Julie Alejandra Ibarra como parte de la pasantía social necesaria para la condonación del crédito del fondo FEST de la Secretaría de Educación.
