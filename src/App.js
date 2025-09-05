@@ -26,6 +26,17 @@ function App() {
             <Route path="/detalle/:id" element={<DetallePostulacion />} />
             <Route path="/revision/:id" element={<Revision />} />
           </Route>
+          {/* Ruta a la documentación */}
+          <Route
+            path="/documentacion"
+            element={
+              <iframe
+                src="/docs/index.html"
+                title="Documentación"
+                style={{ width: "100%", height: "100vh", border: "none" }}
+              />
+            }
+          />
         </Routes>
       </Router>
     </AuthProvider>
