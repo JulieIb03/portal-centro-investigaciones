@@ -146,9 +146,19 @@ const Dashboard = () => {
   };
 
   // Helper para mostrar nombre del estado según rol
-  const getEstadoLabel = (estado, rol) => {
-    if (rol === "revisor" && estado === "Pendiente") return "Nuevo";
-    if (rol === "docente" && estado === "En corrección") return "Devuelto";
+  const getEstadoLabel = (estado, rol, revisiones) => {
+    if (rol === "revisor") {
+      if (estado === "Pendiente") {
+        // Si es revisor, estado es Pendiente y revisiones > 0 → "Reenviado"
+        // Si es revisor, estado es Pendiente y revisiones = 0 → "Nuevo"
+        return revisiones > 0 ? "Reenviado" : "Nuevo";
+      }
+      // Para otros estados, mantener el estado original
+      return estado;
+    }
+    if (rol === "docente" && estado === "En corrección") {
+      return "Devuelto";
+    }
     return estado;
   };
 
@@ -237,7 +247,7 @@ const Dashboard = () => {
                   <td>{formatDate(p.ultimaRevisionFecha)}</td>
                   <td>
                     <p className={`estado ${p.estado.replace(" ", "-")}`}>
-                      {getEstadoLabel(p.estado, user?.rol)}
+                      {getEstadoLabel(p.estado, user?.rol, p.revisiones)}
                     </p>
                   </td>
                 </tr>

@@ -151,7 +151,16 @@ const DetallePostulacion = () => {
       <ul style={{ paddingLeft: "1rem" }}>
         {Object.entries(comentarios).map(([doc, comentario], i) => (
           <li key={i}>
-            <strong>{doc}</strong>: {comentario}
+            <strong>{doc}</strong>:
+            {Array.isArray(comentario) ? (
+              <ul style={{ marginLeft: "1rem" }}>
+                {comentario.map((linea, j) => (
+                  <li key={j}>{linea}</li>
+                ))}
+              </ul>
+            ) : (
+              <span> {comentario}</span>
+            )}
           </li>
         ))}
       </ul>

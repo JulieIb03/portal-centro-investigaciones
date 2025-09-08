@@ -32,6 +32,8 @@ const SubidaDocumentos = ({
   const [error, setError] = useState(null);
   const [ultimaRevision, setUltimaRevision] = useState(null);
   const [uploadProgress, setUploadProgress] = useState({});
+  const [reenvioExitoso, setReenvioExitoso] = useState(false);
+  const [estadoActual, setEstadoActual] = useState(""); // Nuevo estado para rastrear el estado actual
 
   const [opcionesSubvinculacion, setOpcionesSubvinculacion] = useState({});
   const [documentosRequeridos, setDocumentosRequeridos] = useState({});
@@ -54,7 +56,7 @@ const SubidaDocumentos = ({
   const [subvinculaciones, setSubvinculaciones] = useState([]);
   const [documentos, setDocumentos] = useState([]);
 
-  //Obtener las vinculaciones con sus subvinculaciones
+  // Obtener las vinculaciones con sus subvinculaciones
   useEffect(() => {
     const fetchData = async () => {
       try {
@@ -84,6 +86,27 @@ const SubidaDocumentos = ({
 
     fetchData();
   }, []);
+
+  // Obtener el estado actual de la postulación si es reenvío
+  useEffect(() => {
+    const obtenerEstadoPostulacion = async () => {
+      if (!esReenvio || !postulacionId) return;
+
+      try {
+        const postulacionRef = doc(db, "postulaciones", postulacionId);
+        const postulacionSnap = await getDoc(postulacionRef);
+
+        if (postulacionSnap.exists()) {
+          const postulacionData = postulacionSnap.data();
+          setEstadoActual(postulacionData.estado || "");
+        }
+      } catch (error) {
+        console.error("Error al obtener estado de postulación:", error);
+      }
+    };
+
+    obtenerEstadoPostulacion();
+  }, [esReenvio, postulacionId]);
 
   // Obtener la última revisión cuando es reenvío
   useEffect(() => {
@@ -174,10 +197,25 @@ const SubidaDocumentos = ({
     return ultimaRevision?.comentarios?.[nombreDocumento] === "Aprobado";
   };
 
+  // Función para verificar si el botón debe estar deshabilitado
+  const botonDeshabilitado = () => {
+    // Si ya es un reenvío exitoso, deshabilitar
+    if (reenvioExitoso) return true;
+
+    // Si es reenvío y el estado actual es "Pendiente", deshabilitar
+    if (esReenvio && estadoActual === "Pendiente") return true;
+
+    // En otros casos, usar el estado de loading
+    return loading;
+  };
+
   const MAX_FILE_SIZE = 5 * 1024 * 1024; // 5MB
   const ALLOWED_TYPES = ["application/pdf"];
 
   const handleArchivo = async (e, nombreDocumento) => {
+    // Si el estado es "Pendiente", no permitir subir archivos
+    if (estadoActual === "Pendiente") return;
+
     if (documentoEstaAprobado(nombreDocumento)) return;
 
     const file = e.target.files[0];
@@ -271,8 +309,13 @@ const SubidaDocumentos = ({
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+
+    // Si el estado es "Pendiente", no permitir envío
+    if (estadoActual === "Pendiente") return;
+
     setLoading(true);
     setError(null); // Limpiar errores anteriores
+    setReenvioExitoso(false); // Resetear el estado de reenvío exitoso
 
     try {
       // Validación de documentos faltantes (solo los no aprobados)
@@ -302,11 +345,13 @@ const SubidaDocumentos = ({
         });
 
         // 2. Actualizar solo los documentos modificados en la postulación principal
+        // Y cambiar el estado a "Pendiente" para indicar que necesita revisión
         await setDoc(
           postulacionRef,
           {
             fechaActualizacion: serverTimestamp(),
             documentos: documentosActualizados,
+            estado: "Pendiente", // Cambiar el estado a Pendiente
           },
           { merge: true }
         );
@@ -356,6 +401,15 @@ const SubidaDocumentos = ({
             console.error("Error al obtener revisor o enviar correo:", error);
           }
         }
+
+        // Mostrar mensaje de confirmación
+        setReenvioExitoso(true);
+        setEstadoActual("Pendiente"); // Actualizar el estado local
+
+        // Cerrar automáticamente después de 3 segundos
+        setTimeout(() => {
+          onClose();
+        }, 3000);
       } else {
         // ─── NUEVA POSTULACIÓN ───
         const nuevaPostRef = doc(collection(db, "postulaciones"));
@@ -436,10 +490,10 @@ const SubidaDocumentos = ({
             })
           );
         }
-      }
 
-      // Cerrar modal solo si todo fue exitoso
-      onClose();
+        // Cerrar modal solo si todo fue exitoso
+        onClose();
+      }
     } catch (error) {
       console.error("Error en el proceso:", error);
       setError(
@@ -462,6 +516,22 @@ const SubidaDocumentos = ({
       </div>
       <div className="modal-body">
         {error && <div className="error-message">{error}</div>}
+
+        {/* Mensaje de confirmación de reenvío exitoso */}
+        {reenvioExitoso && (
+          <div className="success-message">
+            ✅ Documentos reenviados exitosamente.
+          </div>
+        )}
+
+        {/* Mensaje cuando el estado es Pendiente */}
+        {esReenvio && estadoActual === "Pendiente" && (
+          <div className="info-message">
+            ℹ️ Los documentos ya fueron enviados y están pendientes de revisión.
+            No puedes realizar cambios hasta que sean revisados.
+          </div>
+        )}
+
         <form className="subidaForm" onSubmit={handleSubmit}>
           <label htmlFor="codigoProyecto">Código del Proyecto:</label>
           <input
@@ -471,7 +541,7 @@ const SubidaDocumentos = ({
             value={formData.codigoProyecto}
             onChange={handleChange}
             required
-            disabled={esReenvio}
+            disabled={esReenvio || estadoActual === "Pendiente"}
           />
 
           <label htmlFor="tipoVinculacion">Tipo de vinculación:</label>
@@ -481,7 +551,7 @@ const SubidaDocumentos = ({
             value={formData.tipoVinculacion}
             onChange={handleChange}
             required
-            disabled={esReenvio}
+            disabled={esReenvio || estadoActual === "Pendiente"}
           >
             <option value="">Seleccione</option>
             {Object.keys(opcionesSubvinculacion)
@@ -500,7 +570,11 @@ const SubidaDocumentos = ({
             value={formData.subvinculacion}
             onChange={handleChange}
             required
-            disabled={esReenvio || !formData.tipoVinculacion}
+            disabled={
+              esReenvio ||
+              !formData.tipoVinculacion ||
+              estadoActual === "Pendiente"
+            }
           >
             <option value="">Seleccione</option>
             {subvinculaciones
@@ -520,7 +594,7 @@ const SubidaDocumentos = ({
             value={formData.nombrePostulante}
             onChange={handleChange}
             required
-            disabled={esReenvio}
+            disabled={esReenvio || estadoActual === "Pendiente"}
           />
 
           <div id="documentosContainer">
@@ -576,8 +650,13 @@ const SubidaDocumentos = ({
                         <input
                           type="file"
                           onChange={(e) => handleArchivo(e, docNombre)}
-                          disabled={loading || aprobado}
-                          required={!esReenvio && !aprobado}
+                          disabled={botonDeshabilitado() || aprobado}
+                          required={
+                            !esReenvio &&
+                            !aprobado &&
+                            !reenvioExitoso &&
+                            estadoActual !== "Pendiente"
+                          }
                           accept=".pdf"
                         />
                         {uploadProgress[docNombre] > 0 &&
@@ -604,13 +683,20 @@ const SubidaDocumentos = ({
             </div>
           </div>
 
-          <button
-            type="submit"
-            disabled={loading}
-            style={{ marginTop: "10px" }}
-          >
-            {loading ? "Procesando..." : esReenvio ? "Reenviar" : "Enviar"}
-          </button>
+          {!reenvioExitoso && (
+            <button
+              type="submit"
+              disabled={botonDeshabilitado()}
+              style={{ marginTop: "10px" }}
+              title={
+                estadoActual === "Pendiente"
+                  ? "Los documentos ya están pendientes de revisión"
+                  : ""
+              }
+            >
+              {loading ? "Procesando..." : esReenvio ? "Reenviar" : "Enviar"}
+            </button>
+          )}
         </form>
       </div>
     </div>

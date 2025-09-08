@@ -36,6 +36,20 @@ const RevisionDocumentos = () => {
   const [comentariosPrevios, setComentariosPrevios] = useState({});
   const [isSubmitting, setIsSubmitting] = useState(false);
 
+  const documentosKeys = Object.keys(documentos || {});
+
+  const irAlAnterior = () => {
+    const index = documentosKeys.indexOf(selectedDocKey);
+    if (index > 0) setSelectedDocKey(documentosKeys[index - 1]);
+  };
+
+  const irAlSiguiente = () => {
+    const index = documentosKeys.indexOf(selectedDocKey);
+    if (index < documentosKeys.length - 1) {
+      setSelectedDocKey(documentosKeys[index + 1]);
+    }
+  };
+
   const DotSpinner = () => (
     <div className="dot-spinner">
       <div className="dot-spinner__dot"></div>
@@ -170,10 +184,14 @@ const RevisionDocumentos = () => {
 
   const handleComentarioChange = (e) => {
     const valor = e.target.value;
+    const lineas = valor
+      .split("\n")
+      .map((linea) => linea.trim())
+      .filter(Boolean);
 
     setComentarios((prev) => ({
       ...prev,
-      [selectedDocKey]: valor,
+      [selectedDocKey]: lineas,
     }));
   };
 
@@ -239,6 +257,13 @@ const RevisionDocumentos = () => {
                       selectedDocKey === key ? "activo" : ""
                     }`}
                     onClick={() => setSelectedDocKey(key)}
+                    style={{
+                      backgroundColor: documentosRevisados[key]
+                        ? "#69c0511a" 
+                        : comentarios[key] && comentarios[key].trim() !== ""
+                        ? "#f230301a" 
+                        : "transparent",
+                    }}
                   >
                     {key} {documentosRevisados[key] ? "✓" : ""}
                   </li>
@@ -367,6 +392,30 @@ const RevisionDocumentos = () => {
                 />
                 Aprobar Documento
               </label>
+            </div>
+
+            <div
+              style={{
+                display: "flex",
+                justifyContent: "space-between",
+                gap: "1rem",
+              }}
+            >
+              <button
+                onClick={irAlAnterior}
+                disabled={documentosKeys.indexOf(selectedDocKey) === 0}
+              >
+                Anterior
+              </button>
+              <button
+                onClick={irAlSiguiente}
+                disabled={
+                  documentosKeys.indexOf(selectedDocKey) ===
+                  documentosKeys.length - 1
+                }
+              >
+                Siguiente
+              </button>
             </div>
 
             <button

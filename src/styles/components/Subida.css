@@ -149,3 +149,26 @@
   background-color: var(--color-secundario);
   transition: width 0.3s ease;
 }
+
+.success-message {
+  background-color: #d4edda;
+  color: var(--color-aprobado);
+  padding: 12px;
+  border-radius: 4px;
+  margin-bottom: 16px;
+  border: 1px solid #c3e6cb;
+}
+
+.info-message {
+  background-color: #e6f2ff;
+  color: var(--color-primario);
+  padding: 12px;
+  border-radius: 4px;
+  margin-bottom: 16px;
+  border: 1px solid #b3d7ff;
+}
+
+button:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}

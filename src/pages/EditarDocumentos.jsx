@@ -19,9 +19,8 @@ import CancelarIcon from "../assets/letra-x.png";
 import GuardarIcon from "../assets/aceptar.png";
 
 export default function EditarDocumentos() {
-  const [datos, setDatos] = useState([]);
-  const [mostrarModal, setMostrarModal] = useState(false);
   const [vinculaciones, setVinculaciones] = useState([]);
+  const [mostrarModal, setMostrarModal] = useState(false);
   const [modoEdicion, setModoEdicion] = useState({});
   const [datosEditados, setDatosEditados] = useState({});
   const [titulosEditados, setTitulosEditados] = useState({});
@@ -41,7 +40,6 @@ export default function EditarDocumentos() {
   const [erroresVinculacion, setErroresVinculacion] = useState({});
   const [erroresSubvinculacion, setErroresSubvinculacion] = useState({});
   const [erroresDocumentos, setErroresDocumentos] = useState({});
-  const [erroresNuevaVinculacion, setErroresNuevaVinculacion] = useState("");
   const [erroresNuevaSubvinculacion, setErroresNuevaSubvinculacion] = useState(
     []
   );
@@ -325,12 +323,30 @@ export default function EditarDocumentos() {
       }
     });
     setDatosEditados(nuevosDatos);
-    // 🔹 Elimina también las nuevas subvinculaciones creadas en esa tarjeta
+    // Elimina también las nuevas subvinculaciones creadas en esa tarjeta
     setNuevasSubvinculaciones((prev) => {
       const copia = { ...prev };
       delete copia[vincId];
       return copia;
     });
+  };
+
+  const iniciarEdicion = (vinculacionId) => {
+    setModoEdicion((prev) => ({ ...prev, [vinculacionId]: true }));
+
+    // Preparar datos para edición de todas las subvinculaciones
+    const vinculacion = vinculaciones.find((v) => v.id === vinculacionId);
+    if (vinculacion) {
+      const nuevosDatosEditados = { ...datosEditados };
+      vinculacion.tipos.forEach((tipo) => {
+        const clave = `${vinculacionId}-${tipo.nombre}`;
+        nuevosDatosEditados[clave] = {
+          nombre: tipo.nombre,
+          documentos: tipo.documentos.join(", "),
+        };
+      });
+      setDatosEditados(nuevosDatosEditados);
+    }
   };
 
   useEffect(() => {
@@ -414,82 +430,68 @@ export default function EditarDocumentos() {
                   <h2>{vinc.id}</h2>
                 )}
                 <div style={{ display: "flex", gap: "9px" }}>
-                  {!modoEdicion[vinc.id] && (
-                    <>
-                      <button
-                        className="btnAzul2"
-                        onClick={() =>
-                          setModoEdicion((prev) => ({
-                            ...prev,
-                            [vinc.id]: true,
-                          }))
-                        }
-                      >
-                        <img
-                          src={EditarIcon}
-                          alt="Editar"
-                          className="w-6 h-6"
-                        />
-                      </button>
-                      <button
-                        className="btnAzul2"
-                        onClick={() =>
-                          solicitarConfirmacion(
-                            `¿Estás seguro de que deseas borrar la vinculación "${vinc.id}" y todas sus subvinculaciones?`,
-                            () =>
-                              eliminarVinculacionCompleta(vinc.id, vinc.tipos)
-                          )
-                        }
-                        disabled={loadingBorrarVinc[vinc.id]}
-                      >
-                        {loadingBorrarVinc[vinc.id] ? (
-                          <div style={{ color: "#0b3c4d" }}>
-                            <DotSpinner />
-                          </div>
-                        ) : (
-                          <img
-                            src={BorrarIcon}
-                            alt="Borrar"
-                            className="w-6 h-6"
-                          />
-                        )}
-                      </button>
-                    </>
-                  )}
-                </div>
-                {modoEdicion[vinc.id] && (
+                  {/* Botón unificado para editar/guardar */}
                   <button
                     className="btnAzul2"
-                    onClick={() => guardarCambios(vinc.id)}
-                    style={{ width: "45px" }}
+                    onClick={() => {
+                      if (modoEdicion[vinc.id]) {
+                        guardarCambios(vinc.id);
+                      } else {
+                        iniciarEdicion(vinc.id);
+                      }
+                    }}
                     disabled={loadingGuardar[vinc.id]}
                   >
                     {loadingGuardar[vinc.id] ? (
                       <div style={{ color: "#0b3c4d" }}>
                         <DotSpinner />
                       </div>
-                    ) : (
+                    ) : modoEdicion[vinc.id] ? (
                       <img
                         src={GuardarIcon}
                         alt="Guardar"
                         className="w-6 h-6"
                       />
+                    ) : (
+                      <img src={EditarIcon} alt="Editar" className="w-6 h-6" />
                     )}
                   </button>
-                )}
-                {modoEdicion[vinc.id] && (
+
+                  {/* Botón para cancelar edición */}
+                  {modoEdicion[vinc.id] && (
+                    <button
+                      className="btnAzul2"
+                      onClick={() => cancelarEdicionTarjeta(vinc.id)}
+                      style={{ width: "45px" }}
+                    >
+                      <img
+                        src={CancelarIcon}
+                        alt="Cancelar"
+                        className="w-6 h-6"
+                      />
+                    </button>
+                  )}
+                  
+                  {/* Botón para eliminar vinculación */}
                   <button
                     className="btnAzul2"
-                    onClick={() => cancelarEdicionTarjeta(vinc.id)}
-                    style={{ width: "45px" }}
+                    onClick={() =>
+                      solicitarConfirmacion(
+                        `¿Estás seguro de que deseas borrar la vinculación "${vinc.id}" y todas sus subvinculaciones?`,
+                        () => eliminarVinculacionCompleta(vinc.id, vinc.tipos)
+                      )
+                    }
+                    disabled={loadingBorrarVinc[vinc.id]}
                   >
-                    <img
-                      src={CancelarIcon}
-                      alt="Cancelar"
-                      className="w-6 h-6"
-                    />
+                    {loadingBorrarVinc[vinc.id] ? (
+                      <div style={{ color: "#0b3c4d" }}>
+                        <DotSpinner />
+                      </div>
+                    ) : (
+                      <img src={BorrarIcon} alt="Borrar" className="w-6 h-6" />
+                    )}
                   </button>
-                )}
+                </div>
               </div>
 
               {vinc.tipos.map((tipo, idx) => {
@@ -497,7 +499,7 @@ export default function EditarDocumentos() {
                 if (!tipo.nombre || tipo.nombre.trim() === "") return null;
 
                 const clave = `${vinc.id}-${tipo.nombre}`;
-                const editando = datosEditados[clave];
+                const editando = modoEdicion[vinc.id] && datosEditados[clave];
 
                 return (
                   <div key={idx} className="subvinculacion">
@@ -507,7 +509,9 @@ export default function EditarDocumentos() {
                           <div style={{ width: "100%" }}>
                             <input
                               required
-                              value={editando.nombre}
+                              value={
+                                datosEditados[clave]?.nombre || tipo.nombre
+                              }
                               onChange={(e) =>
                                 setDatosEditados((prev) => ({
                                   ...prev,
@@ -531,102 +535,11 @@ export default function EditarDocumentos() {
                               </p>
                             )}
                           </div>
-                          <div style={{ display: "flex", gap: "10px" }}>
-                            <button
-                              className="btnAzul2"
-                              onClick={() => guardarCambios(vinc.id)}
-                              style={{ width: "45px" }}
-                              disabled={loadingGuardar[vinc.id]}
-                            >
-                              {loadingGuardar[vinc.id] ? (
-                                <div style={{ color: "#0b3c4d" }}>
-                                  <DotSpinner />
-                                </div>
-                              ) : (
-                                <img
-                                  src={GuardarIcon}
-                                  alt="Guardar"
-                                  className="w-6 h-6"
-                                />
-                              )}
-                            </button>
-                            <button
-                              className="btnAzul2"
-                              onClick={() =>
-                                setDatosEditados((prev) => {
-                                  const nuevos = { ...prev };
-                                  delete nuevos[clave];
-                                  return nuevos;
-                                })
-                              }
-                              style={{ width: "45px" }}
-                            >
-                              <img
-                                src={CancelarIcon}
-                                alt="Cancelar"
-                                className="w-6 h-6"
-                              />
-                            </button>
-                          </div>
                         </>
                       ) : (
                         <>
                           <div className="tarjeta-header">
                             <h3>{tipo.nombre}</h3>
-                            {modoEdicion[vinc.id] && (
-                              <div style={{ display: "flex", gap: "9px" }}>
-                                <button
-                                  className="btnAzul2"
-                                  onClick={() =>
-                                    setDatosEditados((prev) => ({
-                                      ...prev,
-                                      [clave]: {
-                                        nombre: tipo.nombre,
-                                        documentos: tipo.documentos.join(", "),
-                                      },
-                                    }))
-                                  }
-                                >
-                                  <img
-                                    src={EditarIcon}
-                                    alt="Editar"
-                                    className="w-6 h-6"
-                                  />
-                                </button>
-                                <button
-                                  className="btnAzul2"
-                                  onClick={() =>
-                                    solicitarConfirmacion(
-                                      `¿Estás seguro de que deseas borrar la subvinculación "${tipo.nombre}"?`,
-                                      () =>
-                                        borrarSubvinculacion(
-                                          vinc.id,
-                                          tipo.nombre
-                                        )
-                                    )
-                                  }
-                                  disabled={
-                                    loadingBorrarSub[
-                                      `${vinc.id}-${tipo.nombre}`
-                                    ]
-                                  }
-                                >
-                                  {loadingBorrarSub[
-                                    `${vinc.id}-${tipo.nombre}`
-                                  ] ? (
-                                    <div style={{ color: "#0b3c4d" }}>
-                                      <DotSpinner />
-                                    </div>
-                                  ) : (
-                                    <img
-                                      src={BorrarIcon}
-                                      alt="Borrar"
-                                      className="w-6 h-6"
-                                    />
-                                  )}
-                                </button>
-                              </div>
-                            )}
                           </div>
                         </>
                       )}
@@ -635,7 +548,10 @@ export default function EditarDocumentos() {
                     {editando ? (
                       <div style={{ width: "100%", marginTop: "10px" }}>
                         <textarea
-                          value={editando.documentos}
+                          value={
+                            datosEditados[clave]?.documentos ||
+                            tipo.documentos.join(", ")
+                          }
                           onChange={(e) =>
                             setDatosEditados((prev) => ({
                               ...prev,
@@ -680,131 +596,140 @@ export default function EditarDocumentos() {
               })}
 
               {/* Lista de nuevas subvinculaciones */}
-              {(nuevasSubvinculaciones[vinc.id] || []).map((sub, subIndex) => {
-                const errorKey = `nueva-${vinc.id}-${subIndex}`;
-                const errores = erroresNuevaSubvinculacion[subIndex] || "";
+              {modoEdicion[vinc.id] &&
+                (nuevasSubvinculaciones[vinc.id] || []).map((sub, subIndex) => {
+                  const errorKey = `nueva-${vinc.id}-${subIndex}`;
+                  const errores = erroresNuevaSubvinculacion[subIndex] || "";
 
-                return (
-                  <div key={subIndex} style={{ marginBottom: "10px" }}>
-                    {/* Campo de nombre */}
-                    <div
-                      style={{
-                        display: "flex",
-                        alignItems: "center",
-                        gap: "10px",
-                        marginBottom: "10px",
-                      }}
-                    >
-                      <div style={{ width: "100%" }}>
-                        <input
-                          placeholder="Nombre de subvinculación"
-                          value={sub.nombre}
+                  return (
+                    <div key={subIndex} style={{ marginBottom: "10px" }}>
+                      {/* Campo de nombre */}
+                      <div
+                        style={{
+                          display: "flex",
+                          alignItems: "center",
+                          gap: "10px",
+                          marginBottom: "10px",
+                        }}
+                      >
+                        <div style={{ width: "100%" }}>
+                          <input
+                            placeholder="Nombre de subvinculación"
+                            value={sub.nombre}
+                            required
+                            onChange={(e) => {
+                              setNuevasSubvinculaciones((prev) => {
+                                const copia = { ...prev };
+                                copia[vinc.id][subIndex].nombre =
+                                  e.target.value;
+                                return copia;
+                              });
+                              // Limpiar error al escribir
+                              if (errores) {
+                                const nuevosErrores = [
+                                  ...erroresNuevaSubvinculacion,
+                                ];
+                                nuevosErrores[subIndex] = "";
+                                setErroresNuevaSubvinculacion(nuevosErrores);
+                              }
+                            }}
+                            style={{ width: "97%" }}
+                          />
+                        </div>
+                        <button
+                          className="btnAzul2"
+                          onClick={() => {
+                            setNuevasSubvinculaciones((prev) => {
+                              const copia = { ...prev };
+                              copia[vinc.id] = copia[vinc.id].filter(
+                                (_, i) => i !== subIndex
+                              );
+                              if (copia[vinc.id].length === 0)
+                                delete copia[vinc.id];
+                              return copia;
+                            });
+                            // Limpiar errores al eliminar
+                            const nuevosErrores = [
+                              ...erroresNuevaSubvinculacion,
+                            ];
+                            nuevosErrores.splice(subIndex, 1);
+                            setErroresNuevaSubvinculacion(nuevosErrores);
+                          }}
+                          style={{ width: "45px" }}
+                        >
+                          <img
+                            src={CancelarIcon}
+                            alt="Eliminar"
+                            className="w-6 h-6"
+                          />
+                        </button>
+                      </div>
+
+                      {/* Mostrar errores de nombre */}
+                      {errores.includes("Nombre") && (
+                        <p
+                          style={{
+                            color: "var(--color-pendiente)",
+                            margin: "5px 0 0 0",
+                            fontSize: "14px",
+                          }}
+                        >
+                          {errores.split(",").find((e) => e.includes("Nombre"))}
+                        </p>
+                      )}
+
+                      {/* Campo de documentos */}
+                      <div style={{ marginBottom: "10px" }}>
+                        <textarea
+                          placeholder="Documentos requeridos (separados por comas)"
+                          value={sub.documentos}
                           required
                           onChange={(e) => {
                             setNuevasSubvinculaciones((prev) => {
                               const copia = { ...prev };
-                              copia[vinc.id][subIndex].nombre = e.target.value;
+                              copia[vinc.id][subIndex].documentos =
+                                e.target.value;
                               return copia;
                             });
                             // Limpiar error al escribir
-                            if (errores) {
+                            if (errores.includes("Documentos")) {
                               const nuevosErrores = [
                                 ...erroresNuevaSubvinculacion,
                               ];
-                              nuevosErrores[subIndex] = "";
+                              nuevosErrores[subIndex] = nuevosErrores[
+                                subIndex
+                              ].replace(/Documentos[^,]*/, "");
                               setErroresNuevaSubvinculacion(nuevosErrores);
                             }
                           }}
-                          style={{ width: "97%" }}
+                          style={{ width: "98%" }}
                         />
-                      </div>
-                      <button
-                        className="btnAzul2"
-                        onClick={() => guardarCambios(vinc.id)}
-                        style={{ width: "45px" }}
-                        disabled={loadingGuardar[vinc.id]}
-                      >
-                        {loadingGuardar[vinc.id] ? (
-                          <div style={{ color: "#0b3c4d" }}>
-                            <DotSpinner />
-                          </div>
-                        ) : (
-                          <img
-                            src={GuardarIcon}
-                            alt="Guardar"
-                            className="w-6 h-6"
-                          />
+
+                        {/* Mostrar errores de documentos */}
+                        {errores.includes("Documentos") && (
+                          <p
+                            style={{
+                              color: "var(--color-pendiente)",
+                              margin: "5px 0 0 0",
+                              fontSize: "14px",
+                            }}
+                          >
+                            {errores
+                              .split(",")
+                              .find((e) => e.includes("Documentos"))}
+                          </p>
                         )}
-                      </button>
-                      <button
-                        className="btnAzul2"
-                        onClick={() => {
-                          setNuevasSubvinculaciones((prev) => {
-                            const copia = { ...prev };
-                            copia[vinc.id] = copia[vinc.id].filter(
-                              (_, i) => i !== subIndex
-                            );
-                            if (copia[vinc.id].length === 0)
-                              delete copia[vinc.id];
-                            return copia;
-                          });
-                          // Limpiar errores al eliminar
-                          const nuevosErrores = [...erroresNuevaSubvinculacion];
-                          nuevosErrores.splice(subIndex, 1);
-                          setErroresNuevaSubvinculacion(nuevosErrores);
-                        }}
-                        style={{ width: "45px" }}
-                      >
-                        <img
-                          src={CancelarIcon}
-                          alt="Eliminar"
-                          className="w-6 h-6"
-                        />
-                      </button>
-                    </div>
+                      </div>
 
-                    {/* Mostrar errores de nombre */}
-                    {errores.includes("Nombre") && (
-                      <p
-                        style={{
-                          color: "var(--color-pendiente)",
-                          margin: "5px 0 0 0",
-                          fontSize: "14px",
-                        }}
-                      >
-                        {errores.split(",").find((e) => e.includes("Nombre"))}
-                      </p>
-                    )}
-
-                    {/* Campo de documentos */}
-                    <div style={{ marginBottom: "10px" }}>
-                      <textarea
-                        placeholder="Documentos requeridos (separados por comas)"
-                        value={sub.documentos}
-                        required
-                        onChange={(e) => {
-                          setNuevasSubvinculaciones((prev) => {
-                            const copia = { ...prev };
-                            copia[vinc.id][subIndex].documentos =
-                              e.target.value;
-                            return copia;
-                          });
-                          // Limpiar error al escribir
-                          if (errores.includes("Documentos")) {
-                            const nuevosErrores = [
-                              ...erroresNuevaSubvinculacion,
-                            ];
-                            nuevosErrores[subIndex] = nuevosErrores[
-                              subIndex
-                            ].replace(/Documentos[^,]*/, "");
-                            setErroresNuevaSubvinculacion(nuevosErrores);
-                          }
-                        }}
-                        style={{ width: "98%" }}
-                      />
-
-                      {/* Mostrar errores de documentos */}
-                      {errores.includes("Documentos") && (
+                      {/* Mostrar otros errores (como duplicados) */}
+                      {errores
+                        .split(",")
+                        .some(
+                          (e) =>
+                            !["Nombre", "Documentos"].some((prefix) =>
+                              e.includes(prefix)
+                            )
+                        ) && (
                         <p
                           style={{
                             color: "var(--color-pendiente)",
@@ -814,40 +739,17 @@ export default function EditarDocumentos() {
                         >
                           {errores
                             .split(",")
-                            .find((e) => e.includes("Documentos"))}
+                            .find(
+                              (e) =>
+                                !["Nombre", "Documentos"].some((prefix) =>
+                                  e.includes(prefix)
+                                )
+                            )}
                         </p>
                       )}
                     </div>
-
-                    {/* Mostrar otros errores (como duplicados) */}
-                    {errores
-                      .split(",")
-                      .some(
-                        (e) =>
-                          !["Nombre", "Documentos"].some((prefix) =>
-                            e.includes(prefix)
-                          )
-                      ) && (
-                      <p
-                        style={{
-                          color: "var(--color-pendiente)",
-                          margin: "5px 0 0 0",
-                          fontSize: "14px",
-                        }}
-                      >
-                        {errores
-                          .split(",")
-                          .find(
-                            (e) =>
-                              !["Nombre", "Documentos"].some((prefix) =>
-                                e.includes(prefix)
-                              )
-                          )}
-                      </p>
-                    )}
-                  </div>
-                );
-              })}
+                  );
+                })}
 
               {/* Botón para agregar nueva subvinculación */}
               {modoEdicion[vinc.id] && (
@@ -867,24 +769,6 @@ export default function EditarDocumentos() {
                   + Agregar subvinculación
                 </button>
               )}
-
-              {/* {modoEdicion[vinc.id] && (
-                <div style={{ marginTop: "10px" }}>
-                  <button
-                    onClick={() => guardarCambios(vinc.id)}
-                    style={{ width: "100%" }}
-                    disabled={loadingGuardar[vinc.id]}
-                  >
-                    {loadingGuardar[vinc.id] ? (
-                      <div style={{ color: "#0b3c4d" }}>
-                        <DotSpinner />
-                      </div>
-                    ) : (
-                      "Guardar"
-                    )}
-                  </button>
-                </div>
-              )} */}
             </div>
           ))}
         </div>
@@ -894,15 +778,11 @@ export default function EditarDocumentos() {
             <div className="modal-contenido">
               <h2 style={{ marginTop: 0 }}>Nueva Vinculación</h2>
 
-              {/** Estado para manejar varias subvinculaciones */}
-              {/** Debe declararse en el componente padre */}
-              {/* const [subvinculacionesInputs, setSubvinculacionesInputs] = useState([{ nombre: "", documentos: "" }]); */}
-
               <form
                 className="form-nueva-vinculacion"
                 onSubmit={async (e) => {
                   e.preventDefault();
-                  setLoadingGuardarModal(true); // 🔹 Activar spinner
+                  setLoadingGuardarModal(true);
 
                   const vincId = e.target.vinculacion.value.trim();
                   const tipos = subvinculacionesInputs
@@ -941,7 +821,7 @@ export default function EditarDocumentos() {
                   } catch (error) {
                     console.error("Error al crear vinculación:", error);
                   } finally {
-                    setLoadingGuardarModal(false); // 🔹 Desactivar spinner
+                    setLoadingGuardarModal(false);
                   }
                 }}
               >
