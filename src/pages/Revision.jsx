@@ -262,7 +262,7 @@ const RevisionDocumentos = () => {
                         ? "#69c0511a"
                         : comentarios[key] && comentarios[key].trim() !== ""
                         ? "#f230301a"
-                        : "transparent",
+                        : "var(--color-primario)",
                     }}
                   >
                     {key} {documentosRevisados[key] ? "✓" : ""}
@@ -402,12 +402,14 @@ const RevisionDocumentos = () => {
               }}
             >
               <button
+                class="btnAzul"
                 onClick={irAlAnterior}
                 disabled={documentosKeys.indexOf(selectedDocKey) === 0}
               >
                 Anterior
               </button>
               <button
+                class="btnAzul"
                 onClick={irAlSiguiente}
                 disabled={
                   documentosKeys.indexOf(selectedDocKey) ===
