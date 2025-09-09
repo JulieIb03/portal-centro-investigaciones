@@ -36,20 +36,6 @@ const RevisionDocumentos = () => {
   const [comentariosPrevios, setComentariosPrevios] = useState({});
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  const documentosKeys = Object.keys(documentos || {});
-
-  const irAlAnterior = () => {
-    const index = documentosKeys.indexOf(selectedDocKey);
-    if (index > 0) setSelectedDocKey(documentosKeys[index - 1]);
-  };
-
-  const irAlSiguiente = () => {
-    const index = documentosKeys.indexOf(selectedDocKey);
-    if (index < documentosKeys.length - 1) {
-      setSelectedDocKey(documentosKeys[index + 1]);
-    }
-  };
-
   const DotSpinner = () => (
     <div className="dot-spinner">
       <div className="dot-spinner__dot"></div>
@@ -202,6 +188,20 @@ const RevisionDocumentos = () => {
   const documentos = postulacion.documentos || {};
   const documentoActual = documentos[selectedDocKey] || {};
 
+  const documentosKeys = Object.keys(documentos || {});
+
+  const irAlAnterior = () => {
+    const index = documentosKeys.indexOf(selectedDocKey);
+    if (index > 0) setSelectedDocKey(documentosKeys[index - 1]);
+  };
+
+  const irAlSiguiente = () => {
+    const index = documentosKeys.indexOf(selectedDocKey);
+    if (index < documentosKeys.length - 1) {
+      setSelectedDocKey(documentosKeys[index + 1]);
+    }
+  };
+
   // Formateo útil para campos como tipoVinculacion
   const formatVinculacion = (texto) => {
     if (!texto) return "";
@@ -259,9 +259,9 @@ const RevisionDocumentos = () => {
                     onClick={() => setSelectedDocKey(key)}
                     style={{
                       backgroundColor: documentosRevisados[key]
-                        ? "#69c0511a" 
+                        ? "#69c0511a"
                         : comentarios[key] && comentarios[key].trim() !== ""
-                        ? "#f230301a" 
+                        ? "#f230301a"
                         : "transparent",
                     }}
                   >
