@@ -255,15 +255,12 @@ const RevisionDocumentos = () => {
                     key={key}
                     className={`doc-item ${
                       selectedDocKey === key ? "activo" : ""
+                    } ${documentosRevisados[key] ? "revisado" : ""} ${
+                      comentarios[key] && comentarios[key].trim() !== ""
+                        ? "con-comentarios"
+                        : ""
                     }`}
                     onClick={() => setSelectedDocKey(key)}
-                    style={{
-                      backgroundColor: documentosRevisados[key]
-                        ? "#69c0511a"
-                        : comentarios[key] && comentarios[key].trim() !== ""
-                        ? "#f230301a"
-                        : "var(--color-primario)",
-                    }}
                   >
                     {key} {documentosRevisados[key] ? "✓" : ""}
                   </li>

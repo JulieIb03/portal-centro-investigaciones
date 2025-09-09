@@ -33,16 +33,25 @@
   cursor: pointer;
   border-radius: 6px;
   transition: background 0.2s;
+  background-color: white; /* Fondo por defecto */
 }
 
 .sidebar-documentos .doc-item:hover {
-  background: #eaeaea;
+  background: #eaeaea !important; /* Forzar hover con !important */
 }
 
 .sidebar-documentos .doc-item.activo {
-  background: #0b3c4d;
+  background: #0b3c4d !important;
   color: #fff;
   font-weight: bold;
+}
+
+.sidebar-documentos .doc-item.revisado {
+  background: #69c0511a;
+}
+
+.sidebar-documentos .doc-item.con-comentarios {
+  background: #f230301a;
 }
 
 .visor {
