@@ -409,6 +409,8 @@ const SubidaDocumentos = ({
         // Cerrar automáticamente después de 3 segundos
         setTimeout(() => {
           onClose();
+          // Actualizar la página después de cerrar el modal
+          window.location.reload();
         }, 3000);
       } else {
         // ─── NUEVA POSTULACIÓN ───
@@ -493,6 +495,7 @@ const SubidaDocumentos = ({
 
         // Cerrar modal solo si todo fue exitoso
         onClose();
+        window.location.reload();
       }
     } catch (error) {
       console.error("Error en el proceso:", error);
@@ -516,21 +519,6 @@ const SubidaDocumentos = ({
       </div>
       <div className="modal-body">
         {error && <div className="error-message">{error}</div>}
-
-        {/* Mensaje de confirmación de reenvío exitoso */}
-        {reenvioExitoso && (
-          <div className="success-message">
-            ✅ Documentos reenviados exitosamente.
-          </div>
-        )}
-
-        {/* Mensaje cuando el estado es Pendiente */}
-        {esReenvio && estadoActual === "Pendiente" && (
-          <div className="info-message">
-            ℹ️ Los documentos ya fueron enviados y están pendientes de revisión.
-            No puedes realizar cambios hasta que sean revisados.
-          </div>
-        )}
 
         <form className="subidaForm" onSubmit={handleSubmit}>
           <label htmlFor="codigoProyecto">Código del Proyecto:</label>

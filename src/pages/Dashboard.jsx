@@ -179,7 +179,11 @@ const Dashboard = () => {
               onClick={() => setFiltroEstado(filtroEstado === key ? null : key)}
             >
               <div className="card-value">{value}</div>
-              <div className="card-label">{getEstadoLabel(key, user?.rol)}</div>
+              <div className="card-label">
+                {key === "Pendiente"
+                  ? "Pendientes"
+                  : getEstadoLabel(key, user?.rol)}
+              </div>
             </div>
           ))}
         </div>
