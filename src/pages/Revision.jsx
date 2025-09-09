@@ -170,14 +170,10 @@ const RevisionDocumentos = () => {
 
   const handleComentarioChange = (e) => {
     const valor = e.target.value;
-    const lineas = valor
-      .split("\n")
-      .map((linea) => linea.trim())
-      .filter(Boolean);
 
     setComentarios((prev) => ({
       ...prev,
-      [selectedDocKey]: lineas,
+      [selectedDocKey]: valor,
     }));
   };
 
@@ -255,8 +251,11 @@ const RevisionDocumentos = () => {
                     key={key}
                     className={`doc-item ${
                       selectedDocKey === key ? "activo" : ""
-                    } ${documentosRevisados[key] ? "revisado" : ""} ${
-                      comentarios[key] && comentarios[key].trim() !== ""
+                    } ${
+                      documentosRevisados[key] ||
+                      comentarios[key]?.trim() === "Aprobado"
+                        ? "aprobado"
+                        : comentarios[key]?.trim()
                         ? "con-comentarios"
                         : ""
                     }`}
@@ -402,6 +401,9 @@ const RevisionDocumentos = () => {
                 class="btnAzul"
                 onClick={irAlAnterior}
                 disabled={documentosKeys.indexOf(selectedDocKey) === 0}
+                style={{
+                  width: "50%",
+                }}
               >
                 Anterior
               </button>
@@ -412,6 +414,9 @@ const RevisionDocumentos = () => {
                   documentosKeys.indexOf(selectedDocKey) ===
                   documentosKeys.length - 1
                 }
+                style={{
+                  width: "50%",
+                }}
               >
                 Siguiente
               </button>
