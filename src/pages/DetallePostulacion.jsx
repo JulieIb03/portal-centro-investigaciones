@@ -159,7 +159,7 @@ const DetallePostulacion = () => {
                 ))}
               </ul>
             ) : (
-              <span> {comentario}</span>
+              <span style={{ whiteSpace: "break-spaces" }}> {comentario}</span>
             )}
           </li>
         ))}
@@ -184,8 +184,16 @@ const DetallePostulacion = () => {
   };
 
   // Helper para mostrar nombre del estado según rol
-  const getEstadoLabel = (estado, rol) => {
-    if (rol === "revisor" && estado === "Pendiente") return "Nuevo";
+  const getEstadoLabel = (estado, rol, revisiones) => {
+    if (rol === "revisor") {
+      if (estado === "Pendiente") {
+        // Si es revisor, estado es Pendiente y revisiones > 0 → "Reenviado"
+        // Si es revisor, estado es Pendiente y revisiones = 0 → "Nuevo"
+        return revisiones > 0 ? "Reenviado" : "Nuevo";
+      }
+      // Para otros estados, mantener el estado original
+      return estado;
+    }
     if (rol === "docente" && estado === "En corrección") return "Devuelto";
     return estado;
   };
@@ -312,7 +320,7 @@ const DetallePostulacion = () => {
           <div className="estado-card">
             <p>Estado</p>
             <h3 className={`${postulacion.estado.replace(/\s/g, "-")}`}>
-              {getEstadoLabel(postulacion.estado, user?.rol)}
+              {getEstadoLabel(postulacion.estado, user?.rol, postulacion.revisiones)}
             </h3>
           </div>
         </div>
@@ -417,7 +425,8 @@ const DetallePostulacion = () => {
                     <td className={revision.estadoFinal?.replace(/\s/g, "-")}>
                       {getEstadoLabel(
                         revision.estadoFinal || "Pendiente",
-                        user?.rol
+                        user?.rol,
+                        revision.numeroRevision
                       )}
                     </td>
                     <td>
